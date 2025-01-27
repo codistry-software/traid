@@ -78,8 +78,6 @@
 ```
 TRAID/
 ├── docs/
-│   ├── adr/          # Architecture Decision Records
-│   └── technical/    # Technical documentation
 ├── src/
 │   ├── data/         # Data handling
 │   ├── models/       # ML models
