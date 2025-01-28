@@ -14,7 +14,10 @@
       - All trading pairs available on Kraken
       - Focus on USDT pairs (e.g., BTC/USDT, ETH/USDT)
       - Include all market cap sizes for comprehensive testing
-- [ ] Choose data provider/API
+- [x] Choose data provider/API
+      - Selected Kraken API
+      - Using REST API for historical data
+      - Using WebSocket for real-time data
 - [ ] Define data structure
 - [ ] Implement data fetching
 - [ ] Setup data storage
