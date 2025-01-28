@@ -10,25 +10,28 @@
 
 ## 2. Data Architecture
 ### ADR 1: Data Sources
+
 - [x] Define which cryptocurrency data to use
-      - All trading pairs available on Kraken
-      - Focus on USDT pairs (e.g., BTC/USDT, ETH/USDT)
-      - Include all market cap sizes for comprehensive testing
+    - All trading pairs available on Kraken
+    - Focus on USDT pairs (e.g., BTC/USDT, ETH/USDT)
+    - Include all market cap sizes for comprehensive testing
+
 - [x] Choose data provider/API
-      - Selected Kraken API
-      - Using REST API for historical data
-      - Using WebSocket for real-time data
+    - Selected Kraken API
+    - Using REST API for historical data
+    - Using WebSocket for real-time data
+
 - [x] Define data structure
-      Using standard OHLCV format:
-      - timestamp: int (Unix timestamp)
-      - open: float
-      - high: float
-      - low: float
-      - close: float
-      - volume: float
-      Additional data:
-      - trade_count: int
-      - vwap: float (Volume Weighted Average Price)
+    -  Using standard OHLCV format:
+        - timestamp: int (Unix timestamp)
+        - open: float
+        - high: float
+        - low: float
+        - close: float
+        - volume: float
+    - Additional data:
+        - trade_count: int
+        - vwap: float (Volume Weighted Average Price)
 - [ ] Implement data fetching
 - [ ] Setup data storage
 
