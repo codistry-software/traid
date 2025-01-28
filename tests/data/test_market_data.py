@@ -1,5 +1,5 @@
 import pytest
-from src.data.market_data import MarketData
+from traid.data.market_data import MarketData
 
 
 def test_market_data_initialization():
