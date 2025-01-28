@@ -5,7 +5,7 @@
 - [x] Create virtual environment
 - [x] Setup basic project structure
 - [x] Create requirements.txt
-- [ ] Setup basic CI/CD pipeline
+- [x] Setup basic CI/CD pipeline
 - [ ] Create initial test framework
 
 ## 2. Data Architecture
