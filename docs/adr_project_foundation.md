@@ -6,7 +6,7 @@
 - [x] Setup basic project structure
 - [x] Create requirements.txt
 - [x] Setup basic CI/CD pipeline
-- [ ] Create initial test framework
+- [x] Create initial test framework
 
 ## 2. Data Architecture
 ### ADR 1: Data Sources
