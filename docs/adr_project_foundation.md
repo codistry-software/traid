@@ -1,7 +1,7 @@
 # TRAID Project Checklist & Architecture Decisions
 
 ## 1. Project Setup
-- [ ] Initialize Git repository
+- [x] Initialize Git repository
 - [ ] Create virtual environment
 - [ ] Setup basic project structure
 - [ ] Create requirements.txt
