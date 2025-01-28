@@ -16,12 +16,6 @@
 - [ ] Implement data fetching
 - [ ] Setup data storage
 
-### ADR 2: Database Design
-- [ ] Choose database type (SQL/NoSQL)
-- [ ] Design schema
-- [ ] Implement data models
-- [ ] Setup backup strategy
-
 ## 3. Trading Bot Architecture
 ### ADR 3: Core Components
 - [ ] Define bot architecture
