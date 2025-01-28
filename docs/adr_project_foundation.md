@@ -4,7 +4,7 @@
 - [x] Initialize Git repository
 - [x] Create virtual environment
 - [x] Setup basic project structure
-- [ ] Create requirements.txt
+- [x] Create requirements.txt
 - [ ] Setup basic CI/CD pipeline
 - [ ] Create initial test framework
 
