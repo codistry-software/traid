@@ -18,7 +18,17 @@
       - Selected Kraken API
       - Using REST API for historical data
       - Using WebSocket for real-time data
-- [ ] Define data structure
+- [x] Define data structure
+      Using standard OHLCV format:
+      - timestamp: int (Unix timestamp)
+      - open: float
+      - high: float
+      - low: float
+      - close: float
+      - volume: float
+      Additional data:
+      - trade_count: int
+      - vwap: float (Volume Weighted Average Price)
 - [ ] Implement data fetching
 - [ ] Setup data storage
 
