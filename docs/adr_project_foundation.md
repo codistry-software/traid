@@ -2,7 +2,7 @@
 
 ## 1. Project Setup
 - [x] Initialize Git repository
-- [ ] Create virtual environment
+- [x] Create virtual environment
 - [ ] Setup basic project structure
 - [ ] Create requirements.txt
 - [ ] Setup basic CI/CD pipeline
