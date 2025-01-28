@@ -10,7 +10,10 @@
 
 ## 2. Data Architecture
 ### ADR 1: Data Sources
-- [ ] Define which cryptocurrency data to use
+- [x] Define which cryptocurrency data to use
+      - All trading pairs available on Kraken
+      - Focus on USDT pairs (e.g., BTC/USDT, ETH/USDT)
+      - Include all market cap sizes for comprehensive testing
 - [ ] Choose data provider/API
 - [ ] Define data structure
 - [ ] Implement data fetching
