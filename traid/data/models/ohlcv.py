@@ -4,6 +4,16 @@ from typing import Dict, List, Optional
 
 @dataclass
 class OHLCV:
+    """Represents OHLCV (Open, High, Low, Close, Volume) candlestick data.
+
+    Attributes:
+        timestamp: Unix timestamp of the candle
+        open: Opening price
+        high: Highest price during period
+        low: Lowest price during period
+        close: Closing price
+        volume: Trading volume
+    """
     timestamp: int
     open: float
     high: float
