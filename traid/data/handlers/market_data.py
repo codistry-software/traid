@@ -9,7 +9,8 @@ class MarketData:
         self._client = KrakenClient()
 
     def get_ohlcv(self) -> List[Dict]:
-        """Fetch OHLCV data.
+        """Fetch OHLCV data from Kraken API.
+
         Returns:
             List[Dict]: List of OHLCV candles with standardized format
         """
