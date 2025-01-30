@@ -21,6 +21,28 @@ class OHLCV:
     close: float
     volume: float
 
+    @staticmethod
+    def from_kraken_data(raw_candle: list) -> 'OHLCV':
+        """Create OHLCV object from Kraken API response format.
+
+        Args:
+            raw_candle: List containing [timestamp, open, high, low, close, vwap, volume, count]
+
+        Returns:
+            OHLCV: Parsed candlestick data
+        """
+        try:
+            return OHLCV(
+                timestamp=int(raw_candle[0]),
+                open=float(raw_candle[1]),
+                high=float(raw_candle[2]),
+                low=float(raw_candle[3]),
+                close=float(raw_candle[4]),
+                volume=float(raw_candle[6])
+            )
+        except (IndexError, ValueError) as e:
+            raise ValueError(f"Invalid Kraken candle data format: {e}")
+
     def to_dict(self) -> Dict:
         """Convert OHLCV data to dictionary format.
 
