@@ -32,3 +32,32 @@ def test_fetch_ohlcv_data():
         assert 'low' in first_candle
         assert 'close' in first_candle
         assert 'volume' in first_candle
+
+
+def test_parse_ohlcv_response():
+    """Test if OHLCV response is correctly parsed"""
+    market_data = MarketData(
+        symbol="BTC/USD",
+        timeframe="1h"
+    )
+
+    # Mock Kraken API response format
+    mock_response = {
+        "result": {
+            "XXBTZUSD": [
+                # timestamp, open, high, low, close, vwap, volume, count
+                [1707566400, "48200.1", "48300.2", "48100.3", "48250.4", "48225.5", "10.5", 100]
+            ]
+        }
+    }
+
+    result = market_data._parse_ohlcv_response(mock_response)
+
+    assert len(result) == 1
+    candle = result[0]
+    assert candle['timestamp'] == 1707566400
+    assert candle['open'] == 48200.1
+    assert candle['high'] == 48300.2
+    assert candle['low'] == 48100.3
+    assert candle['close'] == 48250.4
+    assert candle['volume'] == 10.5
