@@ -12,6 +12,11 @@ class OHLCV:
     volume: float
 
     def to_dict(self) -> Dict:
+        """Convert OHLCV data to dictionary format.
+
+        Returns:
+            Dict containing OHLCV data with string keys
+        """
         return {
             'timestamp': self.timestamp,
             'open': self.open,
