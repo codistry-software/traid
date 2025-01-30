@@ -11,7 +11,7 @@ class MarketData:
     def get_ohlcv(self) -> List[Dict]:
         """Fetch OHLCV data.
         Returns:
-            List[Dict]: List of OHLCV candles
+            List[Dict]: List of OHLCV candles with standardized format
         """
         response = self._client.get_ohlcv(self.symbol, self.timeframe)
         return self._parse_ohlcv_response(response)
