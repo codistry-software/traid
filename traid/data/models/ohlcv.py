@@ -20,3 +20,25 @@ class OHLCV:
             'close': self.close,
             'volume': self.volume
         }
+
+    @staticmethod
+    def parse_kraken_response(response: Dict) -> List['OHLCV']:
+        """Parse complete Kraken API response into list of OHLCV objects.
+
+        Args:
+            response: Raw Kraken API response dictionary
+
+        Returns:
+            List of OHLCV objects
+
+        Raises:
+            ValueError: If response format is invalid
+        """
+        if not response or 'result' not in response:
+            return []
+
+        try:
+            pair_data = next(iter(response['result'].values()))
+            return [OHLCV.from_kraken_data(candle) for candle in pair_data]
+        except (StopIteration, KeyError) as e:
+            raise ValueError(f"Invalid Kraken response format: {e}")
