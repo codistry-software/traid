@@ -17,4 +17,13 @@ class MarketData:
         return self._parse_ohlcv_response(response)
 
     def _parse_ohlcv_response(self, response: Dict) -> List[Dict]:
-        return []
+        """Parse Kraken OHLCV response into standardized format.
+
+        Args:
+            response: Raw Kraken API response
+
+        Returns:
+            List[Dict]: List of parsed OHLCV candles
+        """
+        ohlcv_list = OHLCV.parse_kraken_response(response)
+        return [candle.to_dict() for candle in ohlcv_list]
