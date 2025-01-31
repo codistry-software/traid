@@ -68,3 +68,21 @@ def test_to_dict():
     assert result['close'] == 48250.4
     assert result['volume'] == 10.5
 
+
+def test_parse_kraken_response():
+    """Test if parse_kraken_response correctly handles full API response."""
+    response = {
+        "result": {
+            "XXBTZUSD": [
+                [1707566400, "48200.1", "48300.2", "48100.3", "48250.4", "48225.5", "10.5", 100],
+                [1707570000, "48250.4", "48400.5", "48200.6", "48350.7", "48325.8", "11.2", 120]
+            ]
+        }
+    }
+
+    result = OHLCV.parse_kraken_response(response)
+
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert all(isinstance(item, OHLCV) for item in result)
+
