@@ -35,3 +35,14 @@ def test_from_kraken_data():
     assert ohlcv.low == 48100.3
     assert ohlcv.close == 48250.4
     assert ohlcv.volume == 10.5
+
+
+def test_from_kraken_data_invalid():
+    """Test if from_kraken_data properly handles invalid data."""
+    invalid_data = [1707566400, "48200.1"]  # Missing required fields
+
+    with pytest.raises(ValueError) as exc_info:
+        OHLCV.from_kraken_data(invalid_data)
+
+    assert "Invalid Kraken candle data format" in str(exc_info.value)
+
