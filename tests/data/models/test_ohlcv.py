@@ -46,3 +46,25 @@ def test_from_kraken_data_invalid():
 
     assert "Invalid Kraken candle data format" in str(exc_info.value)
 
+
+def test_to_dict():
+    """Test if to_dict returns correct dictionary format."""
+    ohlcv = OHLCV(
+        timestamp=1707566400,
+        open=48200.1,
+        high=48300.2,
+        low=48100.3,
+        close=48250.4,
+        volume=10.5
+    )
+
+    result = ohlcv.to_dict()
+
+    assert isinstance(result, dict)
+    assert result['timestamp'] == 1707566400
+    assert result['open'] == 48200.1
+    assert result['high'] == 48300.2
+    assert result['low'] == 48100.3
+    assert result['close'] == 48250.4
+    assert result['volume'] == 10.5
+
