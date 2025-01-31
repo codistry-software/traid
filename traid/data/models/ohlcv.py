@@ -75,6 +75,9 @@ class OHLCV:
             return []
 
         try:
+            if not response['result']:
+                return []
+
             pair_data = next(iter(response['result'].values()))
             return [OHLCV.from_kraken_data(candle) for candle in pair_data]
         except (StopIteration, KeyError) as e:
