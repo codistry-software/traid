@@ -31,3 +31,20 @@ def test_get_ohlcv_request():
         # Check parameters
         assert call_args[1]['params']['pair'] == "BTC/USD"
         assert call_args[1]['params']['interval'] == "1h"
+
+
+def test_get_ohlcv_error_handling():
+    """Test if get_ohlcv properly handles API errors."""
+    with patch('requests.get') as mock_get:
+        # Setup mock error response
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "error": ["EAPI:Invalid arguments"]
+        }
+        mock_get.return_value = mock_response
+
+        client = KrakenClient()
+        response = client.get_ohlcv("INVALID/PAIR", "1h")
+
+        assert "error" in response
+        assert response["error"][0] == "EAPI:Invalid arguments"
