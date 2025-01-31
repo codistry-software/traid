@@ -86,3 +86,13 @@ def test_parse_kraken_response():
     assert len(result) == 2
     assert all(isinstance(item, OHLCV) for item in result)
 
+
+def test_parse_kraken_response_empty():
+    """Test if parse_kraken_response handles empty or invalid responses."""
+    empty_response = {}
+    result = OHLCV.parse_kraken_response(empty_response)
+    assert result == []
+
+    invalid_response = {"result": {}}
+    result = OHLCV.parse_kraken_response(invalid_response)
+    assert result == []
