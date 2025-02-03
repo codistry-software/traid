@@ -108,3 +108,32 @@ def test_macd_basic_calculation(trend_prices):
         decimal=8,
         err_msg="Histogram should be MACD line minus signal line"
     )
+
+
+def test_macd_trend_detection(trend_prices):
+    """Test MACD trend detection capabilities."""
+    params = MACDParameters(
+        fast_period=3,
+        slow_period=6,
+        signal_period=2
+    )
+
+    macd_line, signal_line, histogram = TechnicalIndicators.calculate_macd(
+        trend_prices, params
+    )
+
+    # Get valid values after warmup period
+    valid_idx = params.slow_period
+
+    # Test uptrend detection (first segment)
+    uptrend_macd = macd_line[valid_idx:6]
+    assert np.mean(uptrend_macd) > 0, "MACD should be positive in uptrend"
+
+    # Test downtrend detection (last segment)
+    downtrend_macd = macd_line[-6:]
+    assert np.mean(downtrend_macd) < 0, "MACD should be negative in downtrend"
+
+    # Test oscillation in sideways market (middle segment)
+    sideways_macd = macd_line[12:18]
+    assert abs(np.mean(sideways_macd)) < abs(np.mean(uptrend_macd)), \
+        "MACD should oscillate closer to zero in sideways market"
