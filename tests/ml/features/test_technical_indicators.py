@@ -15,6 +15,13 @@ def downtrend_prices():
     """Generate price data with clear downtrend."""
     return np.array([20, 19, 18, 17, 16, 15, 14, 13, 12, 11])
 
+@pytest.fixture
+def trend_prices():
+    """Generate price data with clear trend patterns for MACD testing."""
+    up = np.array([100, 102, 104, 106, 108, 110])
+    sideways = np.array([110, 109, 111, 110, 109, 111])
+    down = np.array([109, 107, 105, 103, 101, 99])
+    return np.concatenate([up, sideways, down])
 
 def test_rsi_basic_validation():
     """Test RSI input validation."""
