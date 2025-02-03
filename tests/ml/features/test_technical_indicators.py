@@ -30,3 +30,23 @@ def test_rsi_period_validation():
     prices = np.array([1, 2, 3])
     with pytest.raises(ValueError, match="Period must be positive"):
         TechnicalIndicators.calculate_rsi(prices, RSIParameters(period=0))
+
+
+def test_rsi_trend_detection(uptrend_prices, downtrend_prices):
+    """Test RSI calculation with known trends."""
+    params = RSIParameters(period=5)
+
+    # Calculate RSI for both trends
+    rsi_up = TechnicalIndicators.calculate_rsi(uptrend_prices, params)
+    rsi_down = TechnicalIndicators.calculate_rsi(downtrend_prices, params)
+
+    # Check only valid values (after warmup)
+    valid_idx = params.period
+
+    # Uptrend should have higher RSI values
+    assert np.mean(rsi_up[valid_idx:]) > np.mean(rsi_down[valid_idx:]), \
+           "RSI failed to detect trend difference"
+
+    # All values should be in valid range
+    assert np.all((rsi_up[valid_idx:] >= 0) & (rsi_up[valid_idx:] <= 100)), \
+           "RSI values out of valid range"
