@@ -24,3 +24,9 @@ def test_rsi_basic_validation():
     with pytest.raises(ValueError, match="Price array contains NaN"):
         TechnicalIndicators.calculate_rsi(np.array([1, np.nan, 3]))
 
+
+def test_rsi_period_validation():
+    """Test RSI period parameter validation."""
+    prices = np.array([1, 2, 3])
+    with pytest.raises(ValueError, match="Period must be positive"):
+        TechnicalIndicators.calculate_rsi(prices, RSIParameters(period=0))
