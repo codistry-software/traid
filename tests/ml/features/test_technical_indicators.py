@@ -1,7 +1,11 @@
 """Tests for technical indicators calculations."""
 import pytest
 import numpy as np
-from traid.ml.features.technical_indicators import TechnicalIndicators, RSIParameters
+from traid.ml.features.technical_indicators import (
+    TechnicalIndicators,
+    RSIParameters,
+    MACDParameters
+)
 
 
 @pytest.fixture
