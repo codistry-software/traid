@@ -57,3 +57,11 @@ def test_rsi_trend_detection(uptrend_prices, downtrend_prices):
     # All values should be in valid range
     assert np.all((rsi_up[valid_idx:] >= 0) & (rsi_up[valid_idx:] <= 100)), \
            "RSI values out of valid range"
+
+def test_macd_input_validation():
+    """Test MACD input validation."""
+    with pytest.raises(ValueError, match="Price array cannot be empty"):
+        TechnicalIndicators.calculate_macd(np.array([]))
+
+    with pytest.raises(ValueError, match="Price array contains NaN"):
+        TechnicalIndicators.calculate_macd(np.array([1, np.nan, 3]))
