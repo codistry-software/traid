@@ -122,18 +122,14 @@ def test_macd_trend_detection(trend_prices):
         trend_prices, params
     )
 
-    # Get valid values after warmup period
     valid_idx = params.slow_period
 
-    # Test uptrend detection (first segment)
-    uptrend_macd = macd_line[valid_idx:6]
+    uptrend_macd = macd_line[valid_idx:10]
     assert np.mean(uptrend_macd) > 0, "MACD should be positive in uptrend"
 
-    # Test downtrend detection (last segment)
     downtrend_macd = macd_line[-6:]
     assert np.mean(downtrend_macd) < 0, "MACD should be negative in downtrend"
 
-    # Test oscillation in sideways market (middle segment)
-    sideways_macd = macd_line[12:18]
+    sideways_macd = macd_line[10:16]
     assert abs(np.mean(sideways_macd)) < abs(np.mean(uptrend_macd)), \
         "MACD should oscillate closer to zero in sideways market"
