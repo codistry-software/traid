@@ -99,8 +99,8 @@ class TechnicalIndicators:
 
     @staticmethod
     def calculate_macd(
-        prices: np.ndarray,
-        params: Optional[MACDParameters] = None
+            prices: np.ndarray,
+            params: Optional[MACDParameters] = None
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Calculate MACD (Moving Average Convergence Divergence).
 
@@ -122,6 +122,37 @@ class TechnicalIndicators:
 
         params = params or MACDParameters()
 
-        # Placeholder arrays until we implement the calculation
-        zeros = np.zeros_like(prices)
-        return zeros, zeros, zeros
+        # Calculate EMAs
+        ema_fast = TechnicalIndicators._calculate_ema(prices, params.fast_period)
+        ema_slow = TechnicalIndicators._calculate_ema(prices, params.slow_period)
+
+        # Calculate MACD line
+        macd_line = ema_fast - ema_slow
+
+        # Calculate signal line
+        signal_line = TechnicalIndicators._calculate_ema(macd_line, params.signal_period)
+
+        # Calculate histogram
+        histogram = macd_line - signal_line
+
+        return macd_line, signal_line, histogram
+
+    @staticmethod
+    def _calculate_ema(data: np.ndarray, period: int) -> np.ndarray:
+        """Calculate Exponential Moving Average.
+
+        Args:
+            data: Input data array
+            period: EMA period
+
+        Returns:
+            Array of EMA values
+        """
+        alpha = 2.0 / (period + 1)
+        ema = np.zeros_like(data)
+        ema[period - 1] = np.mean(data[:period])
+
+        for i in range(period, len(data)):
+            ema[i] = data[i] * alpha + ema[i - 1] * (1 - alpha)
+
+        return ema
