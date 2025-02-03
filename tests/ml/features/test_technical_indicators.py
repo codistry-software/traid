@@ -82,3 +82,29 @@ def test_macd_parameter_validation():
     with pytest.raises(ValueError, match="Fast period must be less than slow period"):
         params = MACDParameters(fast_period=26, slow_period=12)
         TechnicalIndicators.calculate_macd(prices, params)
+
+
+def test_macd_basic_calculation(trend_prices):
+    """Test basic MACD calculation properties."""
+    params = MACDParameters(
+        fast_period=3,  # Using smaller periods for testing
+        slow_period=6,
+        signal_period=2
+    )
+
+    macd_line, signal_line, histogram = TechnicalIndicators.calculate_macd(
+        trend_prices, params
+    )
+
+    # Test output lengths
+    assert len(macd_line) == len(trend_prices), "MACD line length should match input"
+    assert len(signal_line) == len(trend_prices), "Signal line length should match input"
+    assert len(histogram) == len(trend_prices), "Histogram length should match input"
+
+    # Verify histogram calculation
+    expected_histogram = macd_line - signal_line
+    np.testing.assert_array_almost_equal(
+        histogram, expected_histogram,
+        decimal=8,
+        err_msg="Histogram should be MACD line minus signal line"
+    )
