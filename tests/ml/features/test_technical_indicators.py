@@ -14,3 +14,13 @@ def uptrend_prices():
 def downtrend_prices():
     """Generate price data with clear downtrend."""
     return np.array([20, 19, 18, 17, 16, 15, 14, 13, 12, 11])
+
+
+def test_rsi_basic_validation():
+    """Test RSI input validation."""
+    with pytest.raises(ValueError, match="Price array cannot be empty"):
+        TechnicalIndicators.calculate_rsi(np.array([]))
+
+    with pytest.raises(ValueError, match="Price array contains NaN"):
+        TechnicalIndicators.calculate_rsi(np.array([1, np.nan, 3]))
+
