@@ -65,3 +65,16 @@ def test_macd_input_validation():
 
     with pytest.raises(ValueError, match="Price array contains NaN"):
         TechnicalIndicators.calculate_macd(np.array([1, np.nan, 3]))
+
+
+def test_macd_parameter_validation():
+    """Test MACD parameter validation."""
+    prices = np.array([1, 2, 3])
+
+    with pytest.raises(ValueError, match="All periods must be positive"):
+        params = MACDParameters(fast_period=0)
+        TechnicalIndicators.calculate_macd(prices, params)
+
+    with pytest.raises(ValueError, match="Fast period must be less than slow period"):
+        params = MACDParameters(fast_period=26, slow_period=12)
+        TechnicalIndicators.calculate_macd(prices, params)
