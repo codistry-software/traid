@@ -1,6 +1,6 @@
 """Technical indicators for trading analysis."""
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 import numpy as np
 
 @dataclass
@@ -96,3 +96,32 @@ class TechnicalIndicators:
                 rsi[i] = 100 - (100 / (1 + rs))
 
         return rsi
+
+    @staticmethod
+    def calculate_macd(
+        prices: np.ndarray,
+        params: Optional[MACDParameters] = None
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Calculate MACD (Moving Average Convergence Divergence).
+
+        Args:
+            prices: Array of price values
+            params: MACD calculation parameters
+
+        Returns:
+            Tuple of (MACD line, Signal line, Histogram)
+
+        Raises:
+            ValueError: If prices array is empty or contains invalid values
+        """
+        if len(prices) == 0:
+            raise ValueError("Price array cannot be empty")
+
+        if np.any(np.isnan(prices)):
+            raise ValueError("Price array contains NaN values")
+
+        params = params or MACDParameters()
+
+        # Placeholder arrays until we implement the calculation
+        zeros = np.zeros_like(prices)
+        return zeros, zeros, zeros
