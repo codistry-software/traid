@@ -22,6 +22,27 @@ class RSIParameters:
             self.min_periods = self.period
 
 
+@dataclass
+class MACDParameters:
+    """Parameters for MACD calculation.
+
+    Attributes:
+        fast_period: Short-term EMA period
+        slow_period: Long-term EMA period
+        signal_period: Signal line EMA period
+    """
+    fast_period: int = 12
+    slow_period: int = 26
+    signal_period: int = 9
+
+    def __post_init__(self):
+        """Validate parameters after initialization."""
+        if self.fast_period <= 0 or self.slow_period <= 0 or self.signal_period <= 0:
+            raise ValueError("All periods must be positive")
+        if self.fast_period >= self.slow_period:
+            raise ValueError("Fast period must be less than slow period")
+
+
 class TechnicalIndicators:
     """Calculate technical indicators for trading analysis."""
 
