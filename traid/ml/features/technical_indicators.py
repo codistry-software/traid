@@ -175,3 +175,44 @@ class TechnicalIndicators:
             ema[i] = data[i] * alpha + ema[i - 1] * (1 - alpha)
 
         return ema
+
+    @staticmethod
+    def calculate_bollinger_bands(
+            prices: np.ndarray,
+            params: Optional[BBParameters] = None
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Calculate Bollinger Bands.
+
+        Args:
+            prices: Array of price values
+            params: Bollinger Bands parameters
+
+        Returns:
+            Tuple of (Upper band, Middle band, Lower band)
+
+        Raises:
+            ValueError: If prices array is empty or contains invalid values
+        """
+        if len(prices) == 0:
+            raise ValueError("Price array cannot be empty")
+
+        if np.any(np.isnan(prices)):
+            raise ValueError("Price array contains NaN values")
+
+        params = params or BBParameters()
+
+        # Calculate middle band (simple moving average)
+        middle_band = np.zeros_like(prices)
+        for i in range(params.period, len(prices)):
+            middle_band[i] = np.mean(prices[i - params.period:i])
+
+        # Calculate standard deviation
+        std = np.zeros_like(prices)
+        for i in range(params.period, len(prices)):
+            std[i] = np.std(prices[i - params.period:i])
+
+        # Calculate upper and lower bands
+        upper_band = middle_band + (std * params.num_std)
+        lower_band = middle_band - (std * params.num_std)
+
+        return upper_band, middle_band, lower_band
