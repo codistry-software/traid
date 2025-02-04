@@ -1,4 +1,3 @@
-"""Tests for trading strategy."""
 import pytest
 import numpy as np
 from traid.ml.strategies.base_strategy import TradingStrategy
