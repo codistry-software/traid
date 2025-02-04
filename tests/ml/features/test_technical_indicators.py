@@ -4,7 +4,8 @@ import numpy as np
 from traid.ml.features.technical_indicators import (
     TechnicalIndicators,
     RSIParameters,
-    MACDParameters
+    MACDParameters,
+    BBParameters
 )
 
 
