@@ -60,3 +60,37 @@ def test_strategy_uptrend_signals(strategy, uptrend_prices):
     sell_count = np.sum(valid_signals == -1)
 
     assert buy_count > sell_count, "Should generate more buy signals in uptrend"
+
+
+def test_strategy_downtrend_signals(strategy, downtrend_prices):
+    """Test strategy signals in downtrend market."""
+    signals = strategy.generate_signals(downtrend_prices)
+
+    # After warmup period, should have more sell than buy signals
+    valid_signals = signals[5:]  # After warmup
+    buy_count = np.sum(valid_signals == 1)
+    sell_count = np.sum(valid_signals == -1)
+
+    assert sell_count > buy_count, "Should generate more sell signals in downtrend"
+
+    # Verify we don't have consecutive buy signals in downtrend
+    for i in range(len(valid_signals) - 1):
+        if valid_signals[i] == 1:
+            assert valid_signals[i + 1] != 1, "Should not have consecutive buys in downtrend"
+
+
+def test_strategy_sideways_signals(strategy, sideways_prices):
+    """Test strategy signals in sideways market."""
+    signals = strategy.generate_signals(sideways_prices)
+
+    valid_signals = signals[5:]
+
+    hold_count = np.sum(valid_signals == 0)
+    action_count = np.sum(valid_signals != 0)
+
+    assert hold_count > action_count, "Should generate more hold signals in sideways market"
+
+    buy_count = np.sum(valid_signals == 1)
+    sell_count = np.sum(valid_signals == -1)
+
+    assert abs(buy_count - sell_count) <= 1, "Buy and sell signals should be balanced in sideways market"
