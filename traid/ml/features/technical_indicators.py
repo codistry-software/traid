@@ -43,6 +43,25 @@ class MACDParameters:
             raise ValueError("Fast period must be less than slow period")
 
 
+@dataclass
+class BBParameters:
+    """Parameters for Bollinger Bands calculation.
+
+    Attributes:
+        period: Moving average period
+        num_std: Number of standard deviations for bands
+    """
+    period: int = 20
+    num_std: float = 2.0
+
+    def __post_init__(self):
+        """Validate parameters after initialization."""
+        if self.period <= 0:
+            raise ValueError("Period must be positive")
+        if self.num_std <= 0:
+            raise ValueError("Number of standard deviations must be positive")
+
+
 class TechnicalIndicators:
     """Calculate technical indicators for trading analysis."""
 
