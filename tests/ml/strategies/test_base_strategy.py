@@ -94,3 +94,50 @@ def test_strategy_sideways_signals(strategy, sideways_prices):
     sell_count = np.sum(valid_signals == -1)
 
     assert abs(buy_count - sell_count) <= 1, "Buy and sell signals should be balanced in sideways market"
+
+
+def test_strategy_extreme_volatility(strategy):
+    """Test strategy behavior during extreme market volatility."""
+    # Create prices with extreme volatility
+    volatile_prices = np.array([
+        100, 150, 80, 120, 60,  # Big swings
+        90, 40, 70, 110, 65,  # Continued volatility
+        85, 95, 75, 115, 55  # More swings
+    ])
+
+    signals = strategy.generate_signals(volatile_prices)
+
+    # After warmup period
+    valid_signals = signals[5:]
+
+    # Should not have too many consecutive trades in volatile markets
+    for i in range(len(valid_signals) - 2):
+        three_signals = valid_signals[i:i + 3]
+        # No more than 2 consecutive non-zero signals
+        assert np.sum(three_signals != 0) <= 2, \
+            "Should avoid excessive trading in volatile markets"
+
+
+def test_strategy_max_positions(strategy):
+    """Test strategy doesn't generate excessive positions."""
+    # Create a clear trend that might trigger multiple signals
+    prices = np.array([
+        10, 11, 12, 13, 15,  # Uptrend
+        16, 18, 20, 22, 25,  # Strong uptrend
+        26, 28, 30, 32, 35  # Continued uptrend
+    ])
+
+    signals = strategy.generate_signals(prices)
+
+    valid_signals = signals[5:]  # After warmup
+    max_consecutive = 0
+    current_consecutive = 0
+
+    for signal in valid_signals:
+        if signal == 1:  # Buy signal
+            current_consecutive += 1
+            max_consecutive = max(max_consecutive, current_consecutive)
+        else:
+            current_consecutive = 0
+
+    assert max_consecutive <= 2, "Should not generate too many consecutive buy signals"
