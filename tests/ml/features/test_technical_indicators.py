@@ -133,3 +133,24 @@ def test_macd_trend_detection(trend_prices):
     sideways_macd = macd_line[10:16]
     assert abs(np.mean(sideways_macd)) < abs(np.mean(uptrend_macd)), \
         "MACD should oscillate closer to zero in sideways market"
+
+
+def test_bollinger_bands_basic_calculation():
+    """Test Bollinger Bands calculation."""
+    prices = np.array([10, 10, 10, 10, 10, 10, 10, 11, 12, 11, 10, 9, 8, 9, 10])
+
+    params = BBParameters(
+        period=5,
+        num_std=2
+    )
+
+    upper, middle, lower = TechnicalIndicators.calculate_bollinger_bands(prices, params)
+
+    # Test output lengths
+    assert len(upper) == len(prices), "Upper band length should match input"
+    assert len(middle) == len(prices), "Middle band length should match input"
+    assert len(lower) == len(prices), "Lower band length should match input"
+
+    # Test basic properties
+    assert np.all(upper >= middle), "Upper band should be above or equal to middle band"
+    assert np.all(middle >= lower), "Middle band should be above or equal to lower band"
