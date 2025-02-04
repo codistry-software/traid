@@ -1,4 +1,3 @@
-"""Test balance management functionality."""
 from decimal import Decimal
 import pytest
 from traid.portfolio.balance import Balance
