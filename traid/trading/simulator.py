@@ -1,5 +1,6 @@
 from decimal import Decimal
 from typing import Dict, List
+import time
 from ..portfolio.balance import Balance
 
 
@@ -37,19 +38,7 @@ class TradingSimulator:
             raise ValueError("Invalid symbol format")
 
     def execute_buy(self, symbol: str, price: Decimal, volume: Decimal) -> bool:
-        """Execute a buy order.
-
-        Args:
-            symbol: Trading pair symbol (e.g. 'BTC/USD')
-            price: Current market price
-            volume: Amount to buy
-
-        Returns:
-            bool: True if order executed successfully, False otherwise
-
-        Raises:
-            ValueError: If volume or price is not positive, or symbol is invalid
-        """
+        """Execute a buy order."""
         self._validate_symbol(symbol)
 
         if volume <= 0:
@@ -67,13 +56,14 @@ class TradingSimulator:
         # Update position
         self.positions[symbol] = self.positions.get(symbol, Decimal("0")) + volume
 
-        # Record trade
+        # Record trade with timestamp
         self.trades_history.append({
             "symbol": symbol,
             "side": "buy",
             "price": price,
             "volume": volume,
-            "cost": cost
+            "cost": cost,
+            "timestamp": int(time.time())
         })
 
         return True
@@ -114,13 +104,14 @@ class TradingSimulator:
         if self.positions[symbol] == Decimal("0"):
             del self.positions[symbol]
 
-        # Record trade
+        # Record trade with timestamp
         self.trades_history.append({
             "symbol": symbol,
             "side": "sell",
             "price": price,
             "volume": volume,
-            "revenue": revenue
+            "revenue": revenue,
+            "timestamp": int(time.time())
         })
 
         return True
