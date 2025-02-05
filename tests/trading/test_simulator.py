@@ -144,3 +144,23 @@ def test_invalid_trade_prices(simulator):
 
     with pytest.raises(ValueError, match="Price must be positive"):
         simulator.execute_sell(symbol, Decimal("-100"), volume)
+
+
+def test_invalid_symbols(simulator):
+    """Test validation of trading symbols."""
+    price = Decimal("30000")
+    volume = Decimal("0.1")
+
+    # Test empty symbol
+    with pytest.raises(ValueError, match="Symbol must not be empty"):
+        simulator.execute_buy("", price, volume)
+
+    with pytest.raises(ValueError, match="Symbol must not be empty"):
+        simulator.execute_sell("", price, volume)
+
+    # Test invalid format (must contain '/')
+    with pytest.raises(ValueError, match="Invalid symbol format"):
+        simulator.execute_buy("BTCUSD", price, volume)
+
+    with pytest.raises(ValueError, match="Invalid symbol format"):
+        simulator.execute_sell("BTCUSD", price, volume)
