@@ -103,4 +103,24 @@ def test_sell_more_than_owned(simulator):
     assert success is False
     assert simulator.positions[symbol] == initial_position
     assert simulator.balance.available == initial_balance
-    assert len(simulator.trades_history) == 1  # Only the buy trade
+    assert len(simulator.trades_history) == 1
+
+
+def test_invalid_trade_volumes(simulator):
+    """Test validation of trade volumes."""
+    symbol = "BTC/USD"
+    price = Decimal("30000")
+
+    # Test zero volume
+    with pytest.raises(ValueError, match="Volume must be positive"):
+        simulator.execute_buy(symbol, price, Decimal("0"))
+
+    with pytest.raises(ValueError, match="Volume must be positive"):
+        simulator.execute_sell(symbol, price, Decimal("0"))
+
+    # Test negative volume
+    with pytest.raises(ValueError, match="Volume must be positive"):
+        simulator.execute_buy(symbol, price, Decimal("-0.1"))
+
+    with pytest.raises(ValueError, match="Volume must be positive"):
+        simulator.execute_sell(symbol, price, Decimal("-0.1"))
