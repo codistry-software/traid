@@ -1,4 +1,3 @@
-"""Test trading simulator functionality."""
 from decimal import Decimal
 import pytest
 from traid.trading.simulator import TradingSimulator
