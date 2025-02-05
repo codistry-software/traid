@@ -70,3 +70,37 @@ def test_simulator_sell(simulator, initial_balance):
     assert trade["side"] == "sell"
     assert trade["price"] == sell_price
     assert trade["volume"] == volume
+
+
+def test_sell_without_position(simulator):
+    """Test selling without having a position."""
+    symbol = "BTC/USD"
+    price = Decimal("30000")
+    volume = Decimal("0.1")
+
+    # Try to sell without position
+    success = simulator.execute_sell(symbol, price, volume)
+
+    assert success is False
+    assert len(simulator.trades_history) == 0
+
+
+def test_sell_more_than_owned(simulator):
+    """Test selling more volume than owned."""
+    symbol = "BTC/USD"
+    price = Decimal("30000")
+    buy_volume = Decimal("0.1")
+    sell_volume = Decimal("0.2")
+
+    # First buy some crypto
+    simulator.execute_buy(symbol, price, buy_volume)
+    initial_position = simulator.positions[symbol]
+    initial_balance = simulator.balance.available
+
+    # Try to sell more than owned
+    success = simulator.execute_sell(symbol, price, sell_volume)
+
+    assert success is False
+    assert simulator.positions[symbol] == initial_position
+    assert simulator.balance.available == initial_balance
+    assert len(simulator.trades_history) == 1  # Only the buy trade

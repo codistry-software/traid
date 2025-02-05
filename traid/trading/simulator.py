@@ -52,3 +52,39 @@ class TradingSimulator:
         })
 
         return True
+
+    def execute_sell(self, symbol: str, price: Decimal, volume: Decimal) -> bool:
+        """Execute a sell order.
+
+        Args:
+            symbol: Trading pair symbol (e.g. 'BTC/USD')
+            price: Current market price
+            volume: Amount to sell
+
+        Returns:
+            bool: True if order executed successfully, False otherwise
+        """
+        # Check if we have enough volume to sell
+        if symbol not in self.positions or self.positions[symbol] < volume:
+            return False
+
+        revenue = price * volume
+
+        # Update balance
+        self.balance.increase(revenue)
+
+        # Update position
+        self.positions[symbol] -= volume
+        if self.positions[symbol] == Decimal("0"):
+            del self.positions[symbol]
+
+        # Record trade
+        self.trades_history.append({
+            "symbol": symbol,
+            "side": "sell",
+            "price": price,
+            "volume": volume,
+            "revenue": revenue
+        })
+
+        return True
