@@ -164,3 +164,20 @@ def test_invalid_symbols(simulator):
 
     with pytest.raises(ValueError, match="Invalid symbol format"):
         simulator.execute_sell("BTCUSD", price, volume)
+
+
+def test_trade_timestamps(simulator):
+    """Test that trades are recorded with timestamps."""
+    symbol = "BTC/USD"
+    price = Decimal("30000")
+    volume = Decimal("0.1")
+
+    # Execute buy and sell
+    simulator.execute_buy(symbol, price, volume)
+    simulator.execute_sell(symbol, price, volume)
+
+    # Verify timestamps
+    for trade in simulator.trades_history:
+        assert "timestamp" in trade
+        assert isinstance(trade["timestamp"], int)
+        assert trade["timestamp"] > 0  # Unix timestamp should be positive
