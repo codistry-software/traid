@@ -2,6 +2,7 @@ from typing import List, Dict
 from ..clients.kraken_client import KrakenClient
 from ..models.ohlcv import OHLCV
 
+
 class MarketData:
     """Handles market data operations and transformations.
 

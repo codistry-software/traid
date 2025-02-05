@@ -1,6 +1,7 @@
 from typing import Dict
 import requests
 
+
 class KrakenClient:
     BASE_URL = "https://api.kraken.com/0/public"
 

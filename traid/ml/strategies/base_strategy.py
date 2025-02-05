@@ -1,4 +1,3 @@
-"""Base trading strategy implementation."""
 from dataclasses import dataclass
 from typing import Optional, List
 import numpy as np
