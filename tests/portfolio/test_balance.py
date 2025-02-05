@@ -44,3 +44,17 @@ def test_balance_operations(balance):
     # Test insufficient funds
     assert balance.decrease(Decimal("2000")) is False
     assert balance.available == initial + Decimal("300")
+
+
+def test_balance_pnl(balance, initial_balance):
+    """Test profit/loss calculation."""
+    # No trades yet
+    assert balance.pnl == Decimal("0")
+
+    # After profitable trades
+    balance.increase(Decimal("500"))
+    assert balance.pnl == Decimal("500")
+
+    # After losses
+    balance.decrease(Decimal("300"))
+    assert balance.pnl == Decimal("200")
