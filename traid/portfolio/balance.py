@@ -45,3 +45,12 @@ class Balance:
             return False
         self.available -= amount
         return True
+
+    @property
+    def pnl(self) -> Decimal:
+        """Calculate current profit/loss.
+
+        Returns:
+            Decimal: Current PnL (positive for profit, negative for loss)
+        """
+        return self.available - self.initial
