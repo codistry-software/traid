@@ -19,3 +19,26 @@ def test_simulator_initialization(simulator, initial_balance):
     assert simulator.balance.available == initial_balance
     assert len(simulator.positions) == 0
     assert len(simulator.trades_history) == 0
+
+
+def test_simulator_buy(simulator, initial_balance):
+    """Test basic buy operation."""
+    symbol = "BTC/USD"
+    price = Decimal("30000")
+    volume = Decimal("0.1")
+
+    # Execute buy
+    success = simulator.execute_buy(symbol, price, volume)
+
+    # Verify success
+    assert success is True
+    assert simulator.positions[symbol] == volume
+    assert simulator.balance.available == initial_balance - (price * volume)
+    assert len(simulator.trades_history) == 1
+
+    # Verify trade record
+    trade = simulator.trades_history[0]
+    assert trade["symbol"] == symbol
+    assert trade["side"] == "buy"
+    assert trade["price"] == price
+    assert trade["volume"] == volume
