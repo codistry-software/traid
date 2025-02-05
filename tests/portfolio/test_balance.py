@@ -21,3 +21,26 @@ def test_balance_negative_validation():
     """Test balance validation rejects negative values."""
     with pytest.raises(ValueError, match="Initial balance must be positive"):
         Balance(Decimal("-100"))
+
+
+def test_balance_negative_validation():
+    """Test balance validation rejects negative values."""
+    with pytest.raises(ValueError, match="Initial balance must be positive"):
+        Balance(Decimal("-100"))
+
+
+def test_balance_operations(balance):
+    """Test balance increase and decrease operations."""
+    initial = balance.available
+
+    # Test increase
+    balance.increase(Decimal("500"))
+    assert balance.available == initial + Decimal("500")
+
+    # Test decrease
+    assert balance.decrease(Decimal("200")) is True
+    assert balance.available == initial + Decimal("300")
+
+    # Test insufficient funds
+    assert balance.decrease(Decimal("2000")) is False
+    assert balance.available == initial + Decimal("300")
