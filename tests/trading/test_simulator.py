@@ -42,3 +42,31 @@ def test_simulator_buy(simulator, initial_balance):
     assert trade["side"] == "buy"
     assert trade["price"] == price
     assert trade["volume"] == volume
+
+
+def test_simulator_sell(simulator, initial_balance):
+    """Test basic sell operation."""
+    symbol = "BTC/USD"
+    buy_price = Decimal("30000")
+    sell_price = Decimal("31000")
+    volume = Decimal("0.1")
+
+    # First buy some crypto
+    simulator.execute_buy(symbol, buy_price, volume)
+    initial_balance_after_buy = simulator.balance.available
+
+    # Execute sell
+    success = simulator.execute_sell(symbol, sell_price, volume)
+
+    # Verify success
+    assert success is True
+    assert symbol not in simulator.positions or simulator.positions[symbol] == Decimal("0")
+    assert simulator.balance.available == initial_balance_after_buy + (sell_price * volume)
+    assert len(simulator.trades_history) == 2
+
+    # Verify trade record
+    trade = simulator.trades_history[-1]
+    assert trade["symbol"] == symbol
+    assert trade["side"] == "sell"
+    assert trade["price"] == sell_price
+    assert trade["volume"] == volume
