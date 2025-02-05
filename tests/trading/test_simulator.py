@@ -124,3 +124,23 @@ def test_invalid_trade_volumes(simulator):
 
     with pytest.raises(ValueError, match="Volume must be positive"):
         simulator.execute_sell(symbol, price, Decimal("-0.1"))
+
+
+def test_invalid_trade_prices(simulator):
+    """Test validation of trade prices."""
+    symbol = "BTC/USD"
+    volume = Decimal("0.1")
+
+    # Test zero price
+    with pytest.raises(ValueError, match="Price must be positive"):
+        simulator.execute_buy(symbol, Decimal("0"), volume)
+
+    with pytest.raises(ValueError, match="Price must be positive"):
+        simulator.execute_sell(symbol, Decimal("0"), volume)
+
+    # Test negative price
+    with pytest.raises(ValueError, match="Price must be positive"):
+        simulator.execute_buy(symbol, Decimal("-100"), volume)
+
+    with pytest.raises(ValueError, match="Price must be positive"):
+        simulator.execute_sell(symbol, Decimal("-100"), volume)
