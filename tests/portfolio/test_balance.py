@@ -58,3 +58,18 @@ def test_balance_pnl(balance, initial_balance):
     # After losses
     balance.decrease(Decimal("300"))
     assert balance.pnl == Decimal("200")
+
+
+def test_operation_amount_validation(balance):
+    """Test validation of operation amounts."""
+    with pytest.raises(ValueError, match="Amount must be positive"):
+        balance.increase(Decimal("-100"))
+
+    with pytest.raises(ValueError, match="Amount must be positive"):
+        balance.decrease(Decimal("-50"))
+
+    with pytest.raises(ValueError, match="Amount must be positive"):
+        balance.increase(Decimal("0"))
+
+    with pytest.raises(ValueError, match="Amount must be positive"):
+        balance.decrease(Decimal("0"))
