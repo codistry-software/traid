@@ -32,7 +32,13 @@ class TradingSimulator:
 
         Returns:
             bool: True if order executed successfully, False otherwise
+
+        Raises:
+            ValueError: If volume is not positive
         """
+        if volume <= 0:
+            raise ValueError("Volume must be positive")
+
         cost = price * volume
 
         # Check if we have enough balance
@@ -63,7 +69,13 @@ class TradingSimulator:
 
         Returns:
             bool: True if order executed successfully, False otherwise
+
+        Raises:
+            ValueError: If volume is not positive
         """
+        if volume <= 0:
+            raise ValueError("Volume must be positive")
+
         # Check if we have enough volume to sell
         if symbol not in self.positions or self.positions[symbol] < volume:
             return False
