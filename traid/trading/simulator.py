@@ -22,6 +22,20 @@ class TradingSimulator:
         self.positions: Dict[str, Decimal] = {}
         self.trades_history: List[dict] = []
 
+    def _validate_symbol(self, symbol: str) -> None:
+        """Validate trading symbol format.
+
+        Args:
+            symbol: Trading pair symbol
+
+        Raises:
+            ValueError: If symbol is empty or has invalid format
+        """
+        if not symbol:
+            raise ValueError("Symbol must not be empty")
+        if '/' not in symbol:
+            raise ValueError("Invalid symbol format")
+
     def execute_buy(self, symbol: str, price: Decimal, volume: Decimal) -> bool:
         """Execute a buy order.
 
@@ -34,8 +48,10 @@ class TradingSimulator:
             bool: True if order executed successfully, False otherwise
 
         Raises:
-            ValueError: If volume or price is not positive
+            ValueError: If volume or price is not positive, or symbol is invalid
         """
+        self._validate_symbol(symbol)
+
         if volume <= 0:
             raise ValueError("Volume must be positive")
 
@@ -74,8 +90,10 @@ class TradingSimulator:
             bool: True if order executed successfully, False otherwise
 
         Raises:
-            ValueError: If volume or price is not positive
+            ValueError: If volume or price is not positive, or symbol is invalid
         """
+        self._validate_symbol(symbol)
+
         if volume <= 0:
             raise ValueError("Volume must be positive")
 
