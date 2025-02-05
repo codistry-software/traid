@@ -29,7 +29,12 @@ class Balance:
 
         Args:
             amount: Amount to add to balance
+
+        Raises:
+            ValueError: If amount is not positive
         """
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
         self.available += amount
 
     def decrease(self, amount: Decimal) -> bool:
@@ -40,7 +45,12 @@ class Balance:
 
         Returns:
             bool: True if decrease successful, False if insufficient funds
+
+        Raises:
+            ValueError: If amount is not positive
         """
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
         if amount > self.available:
             return False
         self.available -= amount
