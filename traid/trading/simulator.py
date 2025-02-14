@@ -125,5 +125,13 @@ class TradingSimulator:
             self.current_prices = {}
         self.current_prices[symbol] = price
 
+    def get_position_value(self, symbol: str) -> Decimal:
+        """Calculate current value of position."""
+        self._validate_symbol(symbol)
+        if symbol not in self.positions:
+            return Decimal("0")
+        if not hasattr(self, 'current_prices') or symbol not in self.current_prices:
+            raise ValueError(f"No current price available for {symbol}")
+        return self.positions[symbol] * self.current_prices[symbol]
 
 
