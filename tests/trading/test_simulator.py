@@ -211,3 +211,15 @@ def test_get_position_pnl(simulator):
     expected_pnl = (new_price - buy_price) * volume
     assert pnl == expected_pnl
 
+def test_get_trading_summary(simulator):
+    """Test generation of trading summary."""
+    symbol = "BTC/USD"
+    simulator.execute_buy(symbol, Decimal("30000"), Decimal("0.1"))
+    simulator.execute_sell(symbol, Decimal("31000"), Decimal("0.1"))
+    simulator.execute_buy(symbol, Decimal("29000"), Decimal("0.2"))
+
+    summary = simulator.get_trading_summary()
+    assert "total_trades" in summary
+    assert "profitable_trades" in summary
+    assert "total_profit_loss" in summary
+    assert summary["total_trades"] == 3
