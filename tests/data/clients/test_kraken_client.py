@@ -29,8 +29,9 @@ def test_get_ohlcv_request():
         assert call_args[0][0] == f"{client.BASE_URL}/OHLC"
 
         # Check parameters
-        assert call_args[1]['params']['pair'] == "BTC/USD"
-        assert call_args[1]['params']['interval'] == "1h"
+        params = call_args[1]['params']
+        assert params['pair'] == "XBTUSD"
+        assert params['interval'] == "60"
 
 
 def test_get_ohlcv_error_handling():
@@ -38,6 +39,7 @@ def test_get_ohlcv_error_handling():
     with patch('requests.get') as mock_get:
         # Setup mock error response
         mock_response = Mock()
+        mock_response.raise_for_status = Mock()
         mock_response.json.return_value = {
             "error": ["EAPI:Invalid arguments"]
         }
@@ -48,3 +50,23 @@ def test_get_ohlcv_error_handling():
 
         assert "error" in response
         assert response["error"][0] == "EAPI:Invalid arguments"
+
+
+def test_timeframe_conversion():
+    """Test timeframe conversion to minutes."""
+    client = KrakenClient()
+
+    assert client._convert_timeframe("1m") == "1"
+    assert client._convert_timeframe("15m") == "15"
+    assert client._convert_timeframe("1h") == "60"
+    assert client._convert_timeframe("4h") == "240"
+    assert client._convert_timeframe("1d") == "1440"
+
+
+def test_symbol_formatting():
+    """Test trading pair symbol formatting."""
+    client = KrakenClient()
+
+    assert client._format_symbol("BTC/USD") == "XBTUSD"
+    assert client._format_symbol("ETH/USD") == "ETHUSD"
+    assert client._format_symbol("BTC/USDT") == "XBTUSDT"
