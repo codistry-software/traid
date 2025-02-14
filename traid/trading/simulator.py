@@ -115,3 +115,15 @@ class TradingSimulator:
         })
 
         return True
+
+    def update_market_price(self, symbol: str, price: Decimal) -> None:
+        """Update current market price for a symbol."""
+        self._validate_symbol(symbol)
+        if price <= 0:
+            raise ValueError("Price must be positive")
+        if not hasattr(self, 'current_prices'):
+            self.current_prices = {}
+        self.current_prices[symbol] = price
+
+
+
