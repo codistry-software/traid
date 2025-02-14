@@ -147,3 +147,28 @@ class TradingSimulator:
         position_cost = self.positions.get(symbol, Decimal("0")) * avg_price
         return current_value - position_cost
 
+    def get_trading_summary(self) -> Dict:
+        """Generate summary of trading activity."""
+        total_trades = len(self.trades_history)
+        if total_trades == 0:
+            return {
+                "total_trades": 0,
+                "profitable_trades": 0,
+                "total_profit_loss": Decimal("0")
+            }
+
+        profitable_trades = 0
+        total_pnl = Decimal("0")
+
+        for trade in self.trades_history:
+            if trade["side"] == "sell":
+                profit = trade["revenue"] - trade["price"] * trade["volume"]
+                if profit > 0:
+                    profitable_trades += 1
+                total_pnl += profit
+
+        return {
+            "total_trades": total_trades,
+            "profitable_trades": profitable_trades,
+            "total_profit_loss": total_pnl
+        }
