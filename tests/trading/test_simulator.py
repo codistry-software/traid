@@ -195,3 +195,19 @@ def test_get_current_position_value(simulator):
 
     position_value = simulator.get_position_value(symbol)
     assert position_value == Decimal("31000") * Decimal("0.1")
+
+def test_get_position_pnl(simulator):
+    """Test calculation of position P&L."""
+    symbol = "BTC/USD"
+    buy_price = Decimal("30000")
+    volume = Decimal("0.1")
+
+    # Execute buy and update to new price
+    simulator.execute_buy(symbol, buy_price, volume)
+    new_price = Decimal("31000")
+    simulator.update_market_price(symbol, new_price)
+
+    pnl = simulator.get_position_pnl(symbol)
+    expected_pnl = (new_price - buy_price) * volume
+    assert pnl == expected_pnl
+
