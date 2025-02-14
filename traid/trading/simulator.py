@@ -134,4 +134,16 @@ class TradingSimulator:
             raise ValueError(f"No current price available for {symbol}")
         return self.positions[symbol] * self.current_prices[symbol]
 
+    def get_position_pnl(self, symbol: str) -> Decimal:
+        """Calculate unrealized P&L for a position."""
+        self._validate_symbol(symbol)
+        buy_trades = [trade for trade in self.trades_history
+                      if trade["symbol"] == symbol and trade["side"] == "buy"]
+        if not buy_trades:
+            return Decimal("0")
+
+        avg_price = sum(t["cost"] for t in buy_trades) / sum(t["volume"] for t in buy_trades)
+        current_value = self.get_position_value(symbol)
+        position_cost = self.positions.get(symbol, Decimal("0")) * avg_price
+        return current_value - position_cost
 
