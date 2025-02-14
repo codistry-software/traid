@@ -181,3 +181,17 @@ def test_trade_timestamps(simulator):
         assert "timestamp" in trade
         assert isinstance(trade["timestamp"], int)
         assert trade["timestamp"] > 0  # Unix timestamp should be positive
+
+
+def test_get_current_position_value(simulator):
+    """Test calculation of current position value."""
+    symbol = "BTC/USD"
+    price = Decimal("30000")
+    volume = Decimal("0.1")
+
+    # Execute buy and update current price
+    simulator.execute_buy(symbol, price, volume)
+    simulator.update_market_price(symbol, Decimal("31000"))
+
+    position_value = simulator.get_position_value(symbol)
+    assert position_value == Decimal("31000") * Decimal("0.1")
