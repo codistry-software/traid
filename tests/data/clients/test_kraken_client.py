@@ -1,72 +1,80 @@
+"""Tests for Kraken WebSocket client."""
 import pytest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock
+import json
 from traid.data.clients.kraken_client import KrakenClient
 
 
 def test_kraken_client_initialization():
-    """Test if KrakenClient initializes with correct base URL."""
+    """Test if KrakenClient initializes correctly."""
     client = KrakenClient()
     assert isinstance(client, KrakenClient)
-    assert client.BASE_URL == "https://api.kraken.com/0/public"
+    assert client.WS_URL == "wss://ws.kraken.com"
 
 
-def test_get_ohlcv_request():
-    """Test if get_ohlcv makes correct API request."""
-    with patch('requests.get') as mock_get:
-        # Setup mock response
-        mock_response = Mock()
-        mock_response.json.return_value = {"result": {}}
-        mock_get.return_value = mock_response
-
-        client = KrakenClient()
-        response = client.get_ohlcv("BTC/USD", "1h")
-
-        # Verify the request
-        mock_get.assert_called_once()
-        call_args = mock_get.call_args
-
-        # Check URL
-        assert call_args[0][0] == f"{client.BASE_URL}/OHLC"
-
-        # Check parameters
-        params = call_args[1]['params']
-        assert params['pair'] == "XBTUSD"
-        assert params['interval'] == "60"
-
-
-def test_get_ohlcv_error_handling():
-    """Test if get_ohlcv properly handles API errors."""
-    with patch('requests.get') as mock_get:
-        # Setup mock error response
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {
-            "error": ["EAPI:Invalid arguments"]
-        }
-        mock_get.return_value = mock_response
-
-        client = KrakenClient()
-        response = client.get_ohlcv("INVALID/PAIR", "1h")
-
-        assert "error" in response
-        assert response["error"][0] == "EAPI:Invalid arguments"
-
-
-def test_timeframe_conversion():
-    """Test timeframe conversion to minutes."""
+@pytest.mark.asyncio
+async def test_websocket_connection():
+    """Test WebSocket connection establishment."""
     client = KrakenClient()
 
-    assert client._convert_timeframe("1m") == "1"
-    assert client._convert_timeframe("15m") == "15"
-    assert client._convert_timeframe("1h") == "60"
-    assert client._convert_timeframe("4h") == "240"
-    assert client._convert_timeframe("1d") == "1440"
+    mock_ws = AsyncMock()
+    with patch('websockets.connect', return_value=mock_ws):
+        await client.connect()
+        assert client.ws == mock_ws
+
+
+@pytest.mark.asyncio
+async def test_price_subscription():
+    """Test price update subscription."""
+    client = KrakenClient()
+    mock_ws = AsyncMock()
+
+    with patch('websockets.connect', return_value=mock_ws):
+        await client.connect()
+        await client.subscribe_price("BTC/USD")
+
+        expected_message = {
+            "event": "subscribe",
+            "pair": ["XBT/USD"],
+            "subscription": {"name": "ticker"}
+        }
+
+        mock_ws.send.assert_called_with(json.dumps(expected_message))
+
+
+@pytest.mark.asyncio
+async def test_price_update_handling():
+    """Test handling of price updates."""
+    client = KrakenClient()
+    received_prices = []
+
+    def on_price_update(price):
+        received_prices.append(price)
+
+    client.on_price_update = on_price_update
+    mock_ws = AsyncMock()
+
+    # Mock a price update message
+    mock_message = [
+        0,
+        {"c": ["50000.0"]},
+        "ticker",
+        "XBT/USD"
+    ]
+
+    with patch('websockets.connect', return_value=mock_ws):
+        await client.connect()
+        mock_ws.recv.return_value = json.dumps(mock_message)
+        await client._process_message()
+
+        assert len(received_prices) == 1
+        assert received_prices[0]["price"] == "50000.0"
+        assert received_prices[0]["symbol"] == "BTC/USD"
 
 
 def test_symbol_formatting():
     """Test trading pair symbol formatting."""
     client = KrakenClient()
-
-    assert client._format_symbol("BTC/USD") == "XBTUSD"
-    assert client._format_symbol("ETH/USD") == "ETHUSD"
-    assert client._format_symbol("BTC/USDT") == "XBTUSDT"
+    assert client._format_symbol("BTC/USD") == "XBT/USD"
+    assert client._format_symbol("ETH/USD") == "ETH/USD"
+    assert client._format_symbol("BTC/USDT") == "XBT/USDT"
