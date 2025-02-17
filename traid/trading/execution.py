@@ -116,17 +116,21 @@ class TradingExecutor:
         Returns:
             bool: True if buy conditions are met
         """
-        # Check trade interval
-        if timestamp - self._last_trade_time < self._min_trade_interval:
+        # Calculate total portfolio value currently in positions
+        total_position_value = Decimal("0")
+        for symbol, volume in self.simulator.positions.items():
+            if symbol in self.simulator.current_prices:
+                total_position_value += volume * self.simulator.current_prices[symbol]
+
+        # Don't use more than 80% of total available balance
+        available_portfolio = self.simulator.balance.available * Decimal("0.8")
+        if total_position_value >= available_portfolio:
             return False
 
-        # Check consecutive trades
-        if self._consecutive_trades >= 3:  # Maximum 3 consecutive trades
-            return False
-
-        # Check if we already have a position
-        current_position = self.simulator.positions.get(self.symbol, Decimal("0"))
-        if current_position > 0:
+        # Maximum 20% of portfolio per position
+        position_size = self._calculate_position_size(self.simulator.current_prices[self.symbol])
+        max_position_value = self.simulator.balance.available * Decimal("0.2")
+        if position_size * self.simulator.current_prices[self.symbol] > max_position_value:
             return False
 
         return True
@@ -140,15 +144,26 @@ class TradingExecutor:
         Returns:
             bool: True if sell conditions are met
         """
-        # Check trade interval
-        if timestamp - self._last_trade_time < self._min_trade_interval:
+        # Can sell if we have a position
+        current_position = self.simulator.positions.get(self.symbol, Decimal("0"))
+        if current_position <= 0:
             return False
 
-        # Check consecutive trades
-        if self._consecutive_trades >= 3:
-            return False
+        # Calculate current position value
+        position_value = current_position * self.simulator.current_prices[self.symbol]
 
-        return True
+        # Calculate profit/loss percentage
+        buy_trades = [t for t in self.trades if t['type'] == 'buy' and t['symbol'] == self.symbol]
+        if not buy_trades:
+            return True
+
+        avg_buy_price = sum(Decimal(str(t['price'])) * Decimal(str(t['volume'])) for t in buy_trades) / \
+                        sum(Decimal(str(t['volume'])) for t in buy_trades)
+
+        profit_percentage = (self.simulator.current_prices[self.symbol] - avg_buy_price) / avg_buy_price * 100
+
+        # Sell if profit is above 5% or loss is more than 2%
+        return profit_percentage >= 5 or profit_percentage <= -2
 
     def _calculate_position_size(self, price: Decimal) -> Decimal:
         """Calculate appropriate position size based on current balance.
