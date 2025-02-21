@@ -1,13 +1,12 @@
-"""Main trading bot runner."""
+"""Main trading bot runner with asyncio support for WebSockets."""
 from decimal import Decimal
 from typing import Dict, List
-import time
-import threading
+import asyncio
 from .trading.execution import TradingExecutor
 
 
 class TradingBotRunner:
-    """Main trading bot runner.
+    """Main trading bot runner with asyncio support.
 
     Handles the continuous execution of trading cycles
     and maintains execution history.
@@ -18,7 +17,7 @@ class TradingBotRunner:
             symbol: str,
             timeframe: str,
             initial_balance: Decimal,
-            update_interval: int = 3600
+            update_interval: int = 60
     ) -> None:
         """Initialize trading bot runner.
 
@@ -36,46 +35,56 @@ class TradingBotRunner:
         self.update_interval = update_interval
         self.is_running = False
         self.execution_history: List[Dict] = []
-        self._thread = None
-        self._stop_event = threading.Event()
+        self._stop_event = asyncio.Event()
+        self._task = None
 
-    def start(self) -> None:
-        """Start the trading bot."""
+    async def start(self) -> None:
+        """Start the trading bot asynchronously."""
         if self.is_running:
             return
 
         self.is_running = True
         self._stop_event.clear()
-        self._thread = threading.Thread(target=self._run)
-        self._thread.start()
+        self._task = asyncio.create_task(self._run())
         print(f"Trading bot started - {self.executor.symbol} on {self.executor.timeframe}")
 
-    def stop(self) -> None:
-        """Stop the trading bot."""
+    async def stop(self) -> None:
+        """Stop the trading bot asynchronously."""
         if not self.is_running:
             return
 
         self._stop_event.set()
-        if self._thread:
-            self._thread.join()
+        if self._task:
+            await self._task
         self.is_running = False
         print("\nTrading bot stopped")
         self._print_final_summary()
 
-    def _run(self) -> None:
-        """Main execution loop."""
+    async def _run(self) -> None:
+        """Main execution loop with asyncio."""
         while not self._stop_event.is_set():
             try:
+                # In Zukunft könnte hier die execute_cycle Methode auch async sein
+                # für eine vollständige WebSocket-Integration
                 result = self.executor.execute_cycle()
                 self.execution_history.append(result)
                 self._print_cycle_result(result)
 
-                # Wait for next update
-                self._stop_event.wait(self.update_interval)
+                # Warten mit asyncio
+                try:
+                    # Warte auf nächstes Update oder bis stop() aufgerufen wird
+                    await asyncio.wait_for(
+                        self._stop_event.wait(),
+                        timeout=self.update_interval
+                    )
+                except asyncio.TimeoutError:
+                    # Timeout ist erwartet wenn update_interval abläuft
+                    pass
+
             except Exception as e:
                 print(f"Error in execution cycle: {e}")
-                # Continue running despite errors
-                time.sleep(self.update_interval)
+                # Weiter ausführen trotz Fehler
+                await asyncio.sleep(self.update_interval)
 
     def _print_cycle_result(self, result: Dict) -> None:
         """Print execution cycle result."""
