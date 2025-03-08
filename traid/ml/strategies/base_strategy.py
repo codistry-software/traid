@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, List
 import numpy as np
 
@@ -13,15 +13,22 @@ from ..features.technical_indicators import (
 @dataclass
 class StrategyParameters:
     """Parameters for trading strategy."""
-    rsi_params: RSIParameters = RSIParameters(period=5)
-    macd_params: MACDParameters = MACDParameters(
-        fast_period=3,
-        slow_period=6,
-        signal_period=2
+    rsi_params: RSIParameters = field(
+        default_factory=lambda: RSIParameters(period=5)
     )
-    bb_params: BBParameters = BBParameters(period=5)
+    macd_params: MACDParameters = field(
+        default_factory=lambda: MACDParameters(
+            fast_period=3,
+            slow_period=6,
+            signal_period=2
+        )
+    )
+    bb_params: BBParameters = field(
+        default_factory=lambda: BBParameters(period=5)
+    )
     max_consecutive_trades: int = 2
     volatility_threshold: float = 0.1  # 10% price change
+
 
 
 class TradingStrategy:
