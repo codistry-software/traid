@@ -49,6 +49,28 @@ class TestKrakenClient(unittest.TestCase):
         mock_ws.send.assert_called_once()
 
     @patch('websockets.connect')
+    async def test_subscribe_ohlcv(self, mock_connect):
+        """Test subscribing to OHLCV updates."""
+        # Setup mock
+        mock_ws = MagicMock()
+        mock_ws.open = True
+        mock_connect.return_value = mock_ws
+
+        # Connect and subscribe to OHLCV
+        await self.client.connect()
+        await self.client.subscribe_ohlcv(self.test_symbol, interval=5)
+
+        # Assertions
+        formatted_symbol = self.client._format_symbol(self.test_symbol)
+        mock_ws.send.assert_called_once()
+        # Check if the correct message was sent
+        call_args = mock_ws.send.call_args[0][0]
+        self.assertIn('"event":"subscribe"', call_args)
+        self.assertIn('"name":"ohlc"', call_args)
+        self.assertIn('"interval":5', call_args)
+        self.assertIn(formatted_symbol, call_args)
+
+    @patch('websockets.connect')
     async def test_process_message(self, mock_connect):
         """Test processing WebSocket messages."""
         # Setup mock
