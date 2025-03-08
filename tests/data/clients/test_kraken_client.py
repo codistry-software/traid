@@ -162,6 +162,31 @@ class TestKrakenClient(unittest.TestCase):
         self.assertEqual(result_limited[0]["timestamp"], 2000)
         self.assertEqual(result_limited[1]["timestamp"], 3000)
 
+    @patch('websockets.connect')
+    async def test_process_ohlcv_message(self, mock_connect):
+        """Test processing OHLCV WebSocket messages."""
+        # Setup mock
+        mock_ws = MagicMock()
+        mock_ws.open = True
+        mock_connect.return_value = mock_ws
+
+        # Connect
+        await self.client.connect()
+
+        # Test OHLCV message
+        ohlc_message = '[42,["1617592800","59000.1","59100.8","58900.0","59050.5","0.0","10.12345678",100],"ohlc","XBT/USDT"]'
+        await self.client._process_message(ohlc_message)
+
+        # Assertions
+        self.assertIn("BTC/USDT", self.client.ohlcv_data)
+        candle = self.client.ohlcv_data["BTC/USDT"][0]
+        self.assertEqual(candle["timestamp"], 1617592800)
+        self.assertEqual(candle["open"], Decimal("59000.1"))
+        self.assertEqual(candle["high"], Decimal("59100.8"))
+        self.assertEqual(candle["low"], Decimal("58900.0"))
+        self.assertEqual(candle["close"], Decimal("59050.5"))
+        self.assertEqual(candle["volume"], Decimal("10.12345678"))
+
 
 if __name__ == '__main__':
     # Run async tests using asyncio
