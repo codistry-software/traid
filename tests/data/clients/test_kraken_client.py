@@ -1,7 +1,7 @@
 """Tests for Kraken WebSocket client."""
 import unittest
 import asyncio
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from decimal import Decimal
 from traid.data.clients.kraken_client import KrakenClient
 
@@ -186,6 +186,48 @@ class TestKrakenClient(unittest.TestCase):
         self.assertEqual(candle["low"], Decimal("58900.0"))
         self.assertEqual(candle["close"], Decimal("59050.5"))
         self.assertEqual(candle["volume"], Decimal("10.12345678"))
+
+    @patch('aiohttp.ClientSession.get')
+    async def test_initialize_historical_data_success(self, mock_get):
+        """Test successful initialization of historical OHLCV data."""
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value={
+            "error": [],
+            "result": {
+                "XBTUSDT": [
+                    # timestamp, open, high, low, close, vwap, volume, count
+                    [1617592800, "50000.1", "51000.2", "49500.3", "50500.4", "50250.5", "10.12345678", 100],
+                    [1617596400, "50500.4", "52000.5", "50400.6", "51800.7", "51200.8", "15.87654321", 150],
+                ]
+            }
+        })
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        # Call the method
+        result = await self.client.initialize_historical_data(["BTC/USDT"], interval=5)
+
+        # Assertions
+        self.assertTrue(result)
+        self.assertIn("BTC/USDT", self.client.ohlcv_data)
+        self.assertEqual(len(self.client.ohlcv_data["BTC/USDT"]), 2)
+
+        # Check first candle data
+        first_candle = self.client.ohlcv_data["BTC/USDT"][0]
+        self.assertEqual(first_candle["timestamp"], 1617592800)
+        self.assertEqual(first_candle["open"], Decimal("50000.1"))
+        self.assertEqual(first_candle["high"], Decimal("51000.2"))
+        self.assertEqual(first_candle["low"], Decimal("49500.3"))
+        self.assertEqual(first_candle["close"], Decimal("50500.4"))
+        self.assertEqual(first_candle["volume"], Decimal("10.12345678"))
+
+        # Verify the HTTP request was made correctly
+        mock_get.assert_called_once()
+        call_args = mock_get.call_args
+        self.assertEqual(call_args[0][0], "https://api.kraken.com/0/public/OHLC")
+        self.assertEqual(call_args[1]["params"]["pair"], "XBTUSDT")
+        self.assertEqual(call_args[1]["params"]["interval"], 5)
 
     @patch('websockets.connect')
     async def test_update_existing_ohlcv_candle(self, mock_connect):
