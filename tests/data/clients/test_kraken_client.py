@@ -187,6 +187,36 @@ class TestKrakenClient(unittest.TestCase):
         self.assertEqual(candle["close"], Decimal("59050.5"))
         self.assertEqual(candle["volume"], Decimal("10.12345678"))
 
+    @patch('websockets.connect')
+    async def test_update_existing_ohlcv_candle(self, mock_connect):
+        """Test updating an existing candle with new OHLCV data."""
+        # Setup mock
+        mock_ws = MagicMock()
+        mock_ws.open = True
+        mock_connect.return_value = mock_ws
+
+        # Connect
+        await self.client.connect()
+
+        # Setup existing candle
+        self.client.ohlcv_data = {
+            "BTC/USDT": [
+                {"timestamp": 1617592800, "open": Decimal("59000.0"), "high": Decimal("59100.0"),
+                 "low": Decimal("58900.0"), "close": Decimal("59000.0"), "volume": Decimal("10.0")}
+            ]
+        }
+
+        # Test OHLCV message with same timestamp but updated values
+        ohlc_message = '[42,["1617592800","59000.0","59200.0","58900.0","59100.0","0.0","12.0",120],"ohlc","XBT/USDT"]'
+        await self.client._process_message(ohlc_message)
+
+        # Assertions
+        self.assertEqual(len(self.client.ohlcv_data["BTC/USDT"]), 1)  # Still one candle
+        candle = self.client.ohlcv_data["BTC/USDT"][0]
+        self.assertEqual(candle["high"], Decimal("59200.0"))  # Updated high
+        self.assertEqual(candle["close"], Decimal("59100.0"))  # Updated close
+        self.assertEqual(candle["volume"], Decimal("12.0"))  # Updated volume
+
 
 if __name__ == '__main__':
     # Run async tests using asyncio
