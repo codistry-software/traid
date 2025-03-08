@@ -234,6 +234,21 @@ class KrakenClient:
         """
         return self.price_data
 
+    def get_ohlcv(self, symbol: str, limit: int = 100) -> Optional[List[Dict]]:
+        """Get OHLCV data for a symbol.
+
+        Args:
+            symbol: Trading pair symbol
+            limit: Maximum number of candles to return
+
+        Returns:
+            List of OHLCV candles or None if not available
+        """
+        if symbol in self.ohlcv_data:
+            # Return the latest 'limit' candles
+            return self.ohlcv_data[symbol][-limit:]
+        return None
+
     def _format_symbol(self, symbol: str) -> str:
         """Format trading pair symbol for Kraken API."""
         if not symbol or '/' not in symbol:
