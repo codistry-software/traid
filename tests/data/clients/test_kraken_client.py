@@ -3,6 +3,9 @@ import unittest
 import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
 from decimal import Decimal
+
+import pytest
+
 from traid.data.clients.kraken_client import KrakenClient
 
 
@@ -14,6 +17,7 @@ class TestKrakenClient(unittest.TestCase):
         self.client = KrakenClient()
         self.test_symbol = "BTC/USDT"
 
+    @pytest.mark.asyncio
     @patch('websockets.connect')
     async def test_connect(self, mock_connect):
         """Test WebSocket connection establishment."""
@@ -32,6 +36,7 @@ class TestKrakenClient(unittest.TestCase):
         mock_connect.assert_called_once_with(self.client.WS_URL)
 
     @patch('websockets.connect')
+    @pytest.mark.asyncio
     async def test_subscribe_price(self, mock_connect):
         """Test subscribing to price updates."""
         # Setup mock
@@ -49,6 +54,7 @@ class TestKrakenClient(unittest.TestCase):
         mock_ws.send.assert_called_once()
 
     @patch('websockets.connect')
+    @pytest.mark.asyncio
     async def test_subscribe_ohlcv(self, mock_connect):
         """Test subscribing to OHLCV updates."""
         # Setup mock
@@ -71,6 +77,7 @@ class TestKrakenClient(unittest.TestCase):
         self.assertIn(formatted_symbol, call_args)
 
     @patch('websockets.connect')
+    @pytest.mark.asyncio
     async def test_process_message(self, mock_connect):
         """Test processing WebSocket messages."""
         # Setup mock
@@ -163,6 +170,7 @@ class TestKrakenClient(unittest.TestCase):
         self.assertEqual(result_limited[1]["timestamp"], 3000)
 
     @patch('websockets.connect')
+    @pytest.mark.asyncio
     async def test_process_ohlcv_message(self, mock_connect):
         """Test processing OHLCV WebSocket messages."""
         # Setup mock
@@ -188,6 +196,7 @@ class TestKrakenClient(unittest.TestCase):
         self.assertEqual(candle["volume"], Decimal("10.12345678"))
 
     @patch('aiohttp.ClientSession.get')
+    @pytest.mark.asyncio
     async def test_initialize_historical_data_success(self, mock_get):
         """Test successful initialization of historical OHLCV data."""
         # Setup mock response
@@ -230,6 +239,7 @@ class TestKrakenClient(unittest.TestCase):
         self.assertEqual(call_args[1]["params"]["interval"], 5)
 
     @patch('websockets.connect')
+    @pytest.mark.asyncio
     async def test_update_existing_ohlcv_candle(self, mock_connect):
         """Test updating an existing candle with new OHLCV data."""
         # Setup mock
@@ -260,6 +270,7 @@ class TestKrakenClient(unittest.TestCase):
         self.assertEqual(candle["volume"], Decimal("12.0"))  # Updated volume
 
     @patch('aiohttp.ClientSession.get')
+    @pytest.mark.asyncio
     async def test_initialize_historical_data_api_error(self, mock_get):
         """Test handling of API errors when fetching historical data."""
         # Setup mock response
@@ -279,6 +290,7 @@ class TestKrakenClient(unittest.TestCase):
         self.assertNotIn("BTC/USDT", self.client.ohlcv_data)
 
     @patch('aiohttp.ClientSession.get')
+    @pytest.mark.asyncio
     async def test_initialize_historical_data_http_error(self, mock_get):
         """Test handling of HTTP errors when fetching historical data."""
         # Setup mock response

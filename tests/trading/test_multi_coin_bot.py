@@ -3,6 +3,9 @@ import unittest
 import asyncio
 from decimal import Decimal
 from unittest.mock import patch, MagicMock, AsyncMock
+
+import pytest
+
 from traid.trading.multi_coin_bot import MultiCoinTradingBot
 
 
@@ -34,6 +37,7 @@ class TestMultiCoinTradingBot(unittest.TestCase):
                 update_interval=1  # Fast updates for testing
             )
 
+    @pytest.mark.asyncio
     async def test_initialization(self):
         """Test bot initialization."""
         # Check basic properties
@@ -54,6 +58,7 @@ class TestMultiCoinTradingBot(unittest.TestCase):
     @patch('traid.trading.multi_coin_bot.KrakenClient')
     @patch('traid.trading.multi_coin_bot.CoinOpportunityAnalyzer')
     @patch('traid.trading.multi_coin_bot.TradingExecutor')
+    @pytest.mark.asyncio
     async def test_start_stop(self, mock_executor, mock_analyzer, mock_client):
         """Test bot start and stop."""
         # Setup mocks
@@ -86,6 +91,7 @@ class TestMultiCoinTradingBot(unittest.TestCase):
         self.assertFalse(bot.is_running)
         mock_client_instance.close.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch('traid.trading.multi_coin_bot.asyncio.sleep', new_callable=AsyncMock)
     async def test_market_analysis_loop(self, mock_sleep):
         """Test market analysis loop."""
@@ -118,6 +124,7 @@ class TestMultiCoinTradingBot(unittest.TestCase):
         self.mock_analyzer.get_best_opportunities.assert_called_once_with(3)
         self.bot._switch_active_coin.assert_called_once_with("BTC/USDT")
 
+    @pytest.mark.asyncio
     async def test_handle_price_update(self):
         """Test handling of price updates."""
         # Setup test data
@@ -141,6 +148,7 @@ class TestMultiCoinTradingBot(unittest.TestCase):
             "BTC/USDT", Decimal("50000"), Decimal("1.5")
         )
 
+    @pytest.mark.asyncio
     @patch('traid.trading.multi_coin_bot.time.time')
     async def test_switch_active_coin(self, mock_time):
         """Test switching between coins."""
