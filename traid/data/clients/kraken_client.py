@@ -275,6 +275,7 @@ class KrakenClient:
             interval = 5  # Default to 5 minutes if invalid interval
 
         kraken_interval = interval_map[interval]
+        success = True
 
         for symbol in symbols:
             formatted_symbol = self._format_symbol(symbol)
@@ -295,7 +296,7 @@ class KrakenClient:
                         if response.status == 200:
                             data = await response.json()
 
-                            if "result" in data and data["error"] == []:
+                            if "result" in data and data["error"] == [] and data["result"]:
                                 pair_data = list(data["result"].keys())[0]
                                 ohlc_data = data["result"][pair_data]
 
@@ -314,12 +315,14 @@ class KrakenClient:
                                         "close": Decimal(str(close)),
                                         "volume": Decimal(str(volume))
                                     })
+                            else:
+                                success = False
                         else:
-                            return False
+                            success = False
             except Exception:
-                return False
+                success = False
 
-        return True
+        return success
 
     def _format_symbol(self, symbol: str) -> str:
         """Format trading pair symbol for Kraken API."""
