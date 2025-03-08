@@ -36,11 +36,23 @@ class KrakenClient:
         Returns:
             bool: True if connection successful, False otherwise
         """
-        if self.ws and self.ws.open:
-            return True
+        if self.ws:
+            try:
+                # Try to send a ping to check if connection is still alive
+                pong = await asyncio.wait_for(self.ws.ping(), timeout=2.0)
+                return True  # Connection is still good
+            except Exception:
+                # Connection is not usable, continue to create a new one
+                pass
 
         try:
-            self.ws = await websockets.connect(self.WS_URL)
+            # Create SSL context with verification disabled
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            self.ws = await websockets.connect(self.WS_URL, ssl=ssl_context)
             self.running = True
             self._reconnect_attempts = 0
 
@@ -72,7 +84,7 @@ class KrakenClient:
         Args:
             symbols: List of trading pair symbols (e.g. ['BTC/USD', 'ETH/USD'])
         """
-        if not self.ws or not self.ws.open:
+        if not self.ws:
             success = await self.connect()
             if not success:
                 print("Failed to connect to WebSocket API")
@@ -87,7 +99,7 @@ class KrakenClient:
         Args:
             symbol: Trading pair symbol (e.g. 'BTC/USD')
         """
-        if not self.ws or not self.ws.open:
+        if not self.ws:
             success = await self.connect()
             if not success:
                 print(f"Failed to subscribe to {symbol}: connection failed")
