@@ -259,6 +259,25 @@ class TestKrakenClient(unittest.TestCase):
         self.assertEqual(candle["close"], Decimal("59100.0"))  # Updated close
         self.assertEqual(candle["volume"], Decimal("12.0"))  # Updated volume
 
+    @patch('aiohttp.ClientSession.get')
+    async def test_initialize_historical_data_api_error(self, mock_get):
+        """Test handling of API errors when fetching historical data."""
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value={
+            "error": ["EGeneral:Invalid arguments"],
+            "result": {}
+        })
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        # Call the method
+        result = await self.client.initialize_historical_data(["BTC/USDT"], interval=5)
+
+        # Assertions
+        self.assertFalse(result)
+        self.assertNotIn("BTC/USDT", self.client.ohlcv_data)
+
 
 if __name__ == '__main__':
     # Run async tests using asyncio
