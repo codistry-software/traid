@@ -19,7 +19,7 @@ class Balance:
         Raises:
             ValueError: If initial balance is not positive
         """
-        if initial <= 0:
+        if initial < 0:
             raise ValueError("Initial balance must be positive")
         self.available = initial
         self.initial = initial
