@@ -132,6 +132,37 @@ class TestKrakenClient(unittest.TestCase):
         # Assert
         self.assertIsNone(result)
 
+    def test_get_ohlcv_with_data(self):
+        """Test getting OHLCV data when data exists."""
+        # Setup test data
+        self.client.ohlcv_data = {
+            "BTC/USDT": [
+                {"timestamp": 1000, "open": Decimal("30000"), "high": Decimal("31000"),
+                 "low": Decimal("29500"), "close": Decimal("30500"), "volume": Decimal("100")},
+                {"timestamp": 2000, "open": Decimal("30500"), "high": Decimal("32000"),
+                 "low": Decimal("30400"), "close": Decimal("31500"), "volume": Decimal("150")},
+                {"timestamp": 3000, "open": Decimal("31500"), "high": Decimal("33000"),
+                 "low": Decimal("31000"), "close": Decimal("32500"), "volume": Decimal("200")},
+            ]
+        }
+
+        # Test with default limit (all data)
+        result = self.client.get_ohlcv(self.test_symbol)
+
+        # Assertions
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[0]["timestamp"], 1000)
+        self.assertEqual(result[-1]["close"], Decimal("32500"))
+
+        # Test with specific limit
+        result_limited = self.client.get_ohlcv(self.test_symbol, limit=2)
+
+        # Assertions for limited result
+        self.assertEqual(len(result_limited), 2)
+        self.assertEqual(result_limited[0]["timestamp"], 2000)
+        self.assertEqual(result_limited[1]["timestamp"], 3000)
+
+
 if __name__ == '__main__':
     # Run async tests using asyncio
     loop = asyncio.get_event_loop()
