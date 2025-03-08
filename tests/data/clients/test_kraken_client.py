@@ -121,6 +121,16 @@ class TestKrakenClient(unittest.TestCase):
         standard = self.client._reverse_format_symbol("ETH/USDT")
         self.assertEqual(standard, "ETH/USDT")
 
+    def test_get_ohlcv_no_data(self):
+        """Test getting OHLCV data when no data exists for the symbol."""
+        # Setup - ensure no data for test symbol
+        self.client.ohlcv_data = {}
+
+        # Act
+        result = self.client.get_ohlcv(self.test_symbol)
+
+        # Assert
+        self.assertIsNone(result)
 
 if __name__ == '__main__':
     # Run async tests using asyncio
