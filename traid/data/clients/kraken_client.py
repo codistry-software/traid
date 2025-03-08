@@ -2,6 +2,7 @@
 import json
 import websockets
 import asyncio
+import aiohttp
 from typing import Dict, Optional, Callable, List, Set
 from decimal import Decimal
 import time
