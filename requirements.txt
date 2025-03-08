@@ -12,3 +12,4 @@ pygments~=2.19.1
 numpy~=2.0.2
 setuptools~=68.2.0
 tensorflow~=2.18.0
+websockets~=15.0.1
