@@ -107,6 +107,28 @@ class KrakenClient:
 
         await self._subscribe_to_symbol(symbol)
 
+    async def subscribe_ohlcv(self, symbol: str, interval: int = 1) -> None:
+        """Subscribe to OHLCV (candle) data for a symbol.
+
+        Args:
+            symbol: Trading pair symbol (e.g. 'BTC/USD')
+            interval: Candle interval in minutes (1, 5, 15, 30, 60, 240, 1440, 10080, 21600)
+        """
+        if not self.ws:
+            success = await self.connect()
+            if not success:
+                print(f"Failed to subscribe to {symbol} OHLCV: connection failed")
+                return
+
+        formatted_symbol = self._format_symbol(symbol)
+        message = {
+            "event": "subscribe",
+            "pair": [formatted_symbol],
+            "subscription": {"name": "ohlc", "interval": interval}
+        }
+        await self.ws.send(json.dumps(message))
+        print(f"Subscribed to {symbol} OHLCV data, interval {interval}")
+
     async def _subscribe_to_symbol(self, symbol: str) -> None:
         """Internal method to send subscription message for a symbol."""
         formatted_symbol = self._format_symbol(symbol)
