@@ -304,6 +304,18 @@ class TestKrakenClient(unittest.TestCase):
         # Assertions
         self.assertFalse(result)
 
+    @patch('aiohttp.ClientSession.get')
+    async def test_initialize_historical_data_exception(self, mock_get):
+        """Test handling of exceptions when fetching historical data."""
+        # Setup mock to raise an exception
+        mock_get.side_effect = Exception("Network error")
+
+        # Call the method
+        result = await self.client.initialize_historical_data(["BTC/USDT"], interval=5)
+
+        # Assertions
+        self.assertFalse(result)
+
 
 if __name__ == '__main__':
     # Run async tests using asyncio
