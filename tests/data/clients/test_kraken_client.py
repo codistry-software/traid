@@ -278,6 +278,20 @@ class TestKrakenClient(unittest.TestCase):
         self.assertFalse(result)
         self.assertNotIn("BTC/USDT", self.client.ohlcv_data)
 
+    @patch('aiohttp.ClientSession.get')
+    async def test_initialize_historical_data_http_error(self, mock_get):
+        """Test handling of HTTP errors when fetching historical data."""
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.status = 500
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        # Call the method
+        result = await self.client.initialize_historical_data(["BTC/USDT"], interval=5)
+
+        # Assertions
+        self.assertFalse(result)
+
 
 if __name__ == '__main__':
     # Run async tests using asyncio
