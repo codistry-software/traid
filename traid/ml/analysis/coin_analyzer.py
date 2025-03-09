@@ -100,6 +100,27 @@ class CoinOpportunityAnalyzer:
 
         return True
 
+    def update_with_real_time_data(self, symbol, price, volume):
+        """Update with real-time data from websocket.
+
+        Args:
+            symbol: Trading pair symbol
+            price: Current price
+            volume: Current volume
+        """
+        if symbol not in self.coin_data:
+            self.coin_data[symbol] = {
+                'prices': [],
+                'volumes': [],
+                'timestamps': []
+            }
+
+        # Add new data point
+        timestamp = int(time.time())
+        self.coin_data[symbol]['timestamps'].append(timestamp)
+        self.coin_data[symbol]['prices'].append(float(price))
+        self.coin_data[symbol]['volumes'].append(float(volume))
+
     def calculate_opportunity_scores(self) -> Dict[str, int]:
         """Calculate opportunity scores for all tracked coins.
 
