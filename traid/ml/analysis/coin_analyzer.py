@@ -122,19 +122,35 @@ class CoinOpportunityAnalyzer:
         score = 50
 
         try:
+            # Check if we have enough data for technical indicators
+            # Most indicators need at least 26 data points
+            if len(prices) < 26:
+                print(f"Not enough data for technical indicators for {symbol} (need 26, have {len(prices)})")
+                return 50  # Return neutral score if not enough data
+
             # Calculate technical indicators
-            rsi = TechnicalIndicators.calculate_rsi(prices)[-1]  # Get latest RSI
+            rsi = TechnicalIndicators.calculate_rsi(prices)
             macd, signal, hist = TechnicalIndicators.calculate_macd(prices)
-            macd_latest, signal_latest = macd[-1], signal[-1]
             upper, middle, lower = TechnicalIndicators.calculate_bollinger_bands(prices)
-            upper_latest, lower_latest = upper[-1], lower[-1]
+
+            # Check if we got valid indicator results
+            if len(rsi) == 0 or len(macd) == 0 or len(upper) == 0:
+                print(f"Technical indicators returned empty results for {symbol}")
+                return 50
+
+            # Get latest values (safely)
+            rsi_latest = rsi[-1] if len(rsi) > 0 else 50
+            macd_latest = macd[-1] if len(macd) > 0 else 0
+            signal_latest = signal[-1] if len(signal) > 0 else 0
+            upper_latest = upper[-1] if len(upper) > 0 else prices[-1] * 1.1
+            lower_latest = lower[-1] if len(lower) > 0 else prices[-1] * 0.9
 
             # RSI component (0-30 points)
-            if rsi < 30:  # Oversold - buying opportunity
-                rsi_score = (30 - rsi)
+            if rsi_latest < self.rsi_oversold:  # Oversold - buying opportunity
+                rsi_score = (self.rsi_oversold - rsi_latest)
                 score += rsi_score
-            elif rsi > 70:  # Overbought - reduce score
-                rsi_score = (rsi - 70)
+            elif rsi_latest > self.rsi_overbought:  # Overbought - reduce score
+                rsi_score = (rsi_latest - self.rsi_overbought)
                 score -= rsi_score
 
             # MACD component (0-40 points)
