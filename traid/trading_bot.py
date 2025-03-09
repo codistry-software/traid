@@ -88,3 +88,27 @@ class TradingBot:
         # Update coin data for analysis
         self._update_coin_data(symbol, price, volume)
 
+    def _update_coin_data(self, symbol: str, price: Decimal, volume: Decimal) -> None:
+        """Update historical data for a coin."""
+        if symbol not in self.coin_data:
+            self.coin_data[symbol] = {
+                'prices': [],
+                'volumes': [],
+                'timestamps': []
+            }
+
+        timestamp = int(time.time())
+
+        # Add new data point
+        self.coin_data[symbol]['prices'].append(float(price))
+        self.coin_data[symbol]['volumes'].append(float(volume))
+        self.coin_data[symbol]['timestamps'].append(timestamp)
+
+        # Limit the history length
+        max_history = 50
+        if len(self.coin_data[symbol]['prices']) > max_history:
+            self.coin_data[symbol]['prices'] = self.coin_data[symbol]['prices'][-max_history:]
+            self.coin_data[symbol]['volumes'] = self.coin_data[symbol]['volumes'][-max_history:]
+            self.coin_data[symbol]['timestamps'] = self.coin_data[symbol]['timestamps'][-max_history:]
+
+    async def start(self) -> None:
