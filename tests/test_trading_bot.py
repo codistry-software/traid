@@ -25,3 +25,15 @@ class TestTradingBot:
         })
         client.close = AsyncMock()
         return client
+
+    @pytest.fixture
+    def trading_bot(self, mock_client):
+        symbols = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT']
+        bot = TradingBot(
+            symbols=symbols,
+            timeframe='1h',
+            initial_balance=Decimal('1000'),
+            client=mock_client,
+            single_coin_mode=False
+        )
+        return bot
