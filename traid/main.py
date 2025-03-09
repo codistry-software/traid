@@ -16,7 +16,7 @@ async def get_all_kraken_pairs():
         # Use REST API to get available asset pairs
         response = requests.get("https://api.kraken.com/0/public/AssetPairs")
         if response.status_code != 200:
-            print("Warning: Failed to fetch trading pairs from Kraken API. Using default set.")
+            print("Warning: Failed to fetch trading pairs. Using default set.")
             return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "ADA/USDT"]
 
         data = response.json()
@@ -25,11 +25,10 @@ async def get_all_kraken_pairs():
             print("Warning: Invalid response from Kraken API. Using default set.")
             return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "ADA/USDT"]
 
-        # Filter for USDT pairs which are more popular for trading
+        # Filter for USDT pairs, excluding stable/stable pairs
         usdt_pairs = []
 
         for pair_name, pair_data in data['result'].items():
-            # Look for USDT pairs and convert to standard format
             if 'USDT' in pair_name:
                 base = pair_data.get('base', '')
                 quote = pair_data.get('quote', '')
