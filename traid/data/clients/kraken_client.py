@@ -90,6 +90,23 @@ class KrakenClient:
             await asyncio.sleep(wait_time)
             return await self.connect()  # Recursive retry with backoff
 
+    async def _reconnect_once(self) -> bool:
+        """Attempt a single reconnect operation with backoff limits."""
+        # We'll close the current ws to ensure a fresh connection
+        if self.ws:
+            await self.ws.close()
+        self.ws = None
+
+        self._reconnect_attempts += 1
+        if self._reconnect_attempts > self._max_reconnect_attempts:
+            print("Exceeded max reconnection attempts in _reconnect_once()")
+            return False
+
+        wait_time = 2 ** self._reconnect_attempts
+        print(f"WebSocket disconnected. Retrying in {wait_time} seconds...")
+        await asyncio.sleep(wait_time)
+        return await self.connect()
+
     async def subscribe_prices(self, symbols: List[str]) -> None:
         """Subscribe to price updates for multiple symbols.
 
