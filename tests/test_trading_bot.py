@@ -37,3 +37,15 @@ class TestTradingBot:
             single_coin_mode=False
         )
         return bot
+
+    @pytest.fixture
+    def single_coin_bot(self, mock_client):
+        symbols = ['BTC/USDT']
+        bot = TradingBot(
+            symbols=symbols,
+            timeframe='1h',
+            initial_balance=Decimal('1000'),
+            client=mock_client,
+            single_coin_mode=True
+        )
+        return bot
