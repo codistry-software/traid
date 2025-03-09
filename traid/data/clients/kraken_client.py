@@ -40,27 +40,28 @@ class KrakenClient:
         self._max_reconnect_attempts = 5
 
     async def connect(self) -> bool:
-        """Establish WebSocket connection with retry logic.
+        """Establish or verify WebSocket connection with retry logic.
 
         Returns:
-            bool: True if connection successful, False otherwise
+            bool: True if connection is successful/active, False otherwise.
         """
+        # If we already have a socket, ping to verify it's alive
         if self.ws:
             try:
-                # Try to send a ping to check if connection is still alive
                 pong = await asyncio.wait_for(self.ws.ping(), timeout=2.0)
-                return True  # Connection is still good
+                # If it doesn't raise, it means the connection is alive
+                return True
             except Exception:
-                # Connection is not usable, continue to create a new one
+                # If ping fails, we'll try to reconnect below
                 pass
 
         try:
             # Create SSL context with verification disabled
-            import ssl
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
 
+            # Actually connect to Kraken's WS
             self.ws = await websockets.connect(self.WS_URL, ssl=ssl_context)
             self.running = True
             self._reconnect_attempts = 0
@@ -69,8 +70,10 @@ class KrakenClient:
             for symbol in self.subscriptions:
                 await self._subscribe_to_symbol(symbol)
 
-            # Start message handler
-            asyncio.create_task(self._message_handler())
+            # Only start the message handler if not already started or if it's done
+            if not self._message_handler_task or self._message_handler_task.done():
+                self._message_handler_task = asyncio.create_task(self._message_handler())
+
             return True
 
         except Exception as e:
@@ -78,14 +81,14 @@ class KrakenClient:
             print(f"Connection attempt {self._reconnect_attempts} failed: {e}")
 
             if self._reconnect_attempts >= self._max_reconnect_attempts:
-                print("Maximum reconnection attempts reached")
+                print("Maximum reconnection attempts reached. Giving up.")
                 return False
 
             # Exponential backoff
             wait_time = 2 ** self._reconnect_attempts
-            print(f"Retrying in {wait_time} seconds...")
+            print(f"Retrying WebSocket connection in {wait_time} seconds...")
             await asyncio.sleep(wait_time)
-            return await self.connect()  # Recursive retry
+            return await self.connect()  # Recursive retry with backoff
 
     async def subscribe_prices(self, symbols: List[str]) -> None:
         """Subscribe to price updates for multiple symbols.
