@@ -14,17 +14,33 @@ class CoinOpportunityAnalyzer:
     technical indicators and market conditions.
     """
 
-    def __init__(self, lookback_window: int = 20):
+    def __init__(self, lookback_window: int = 20,
+                 rsi_oversold: float = 30,
+                 rsi_overbought: float = 70,
+                 switch_threshold: int = 15,
+                 update_interval: int = 60,
+                 min_data_points=30,
+                 rsi_period=14):
         """Initialize coin opportunity analyzer.
 
         Args:
             lookback_window: Number of historical data points to analyze
+            rsi_oversold: RSI threshold for oversold condition
+            rsi_overbought: RSI threshold for overbought condition
+            switch_threshold: Score difference required to switch coins
+            update_interval: Seconds between score calculations
         """
         self.lookback_window = lookback_window
+        self.rsi_oversold = rsi_oversold
+        self.rsi_overbought = rsi_overbought
+        self.switch_threshold = switch_threshold
         self.coin_data: Dict[str, Dict] = {}  # Historical data for each coin
         self.opportunity_scores: Dict[str, int] = {}  # Latest scores
         self.last_update_time = 0
-        self.update_interval = 60  # Only update scores every 60 seconds
+        self.update_interval = update_interval
+        self.min_data_points = min_data_points
+        self.rsi_period = rsi_period
+        self.coin_data = {}
 
     def update_coin_data(self, symbol: str, price: Decimal, volume: Decimal) -> None:
         """Update historical data for a coin.
