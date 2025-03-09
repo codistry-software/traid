@@ -549,3 +549,69 @@ class TradingBot:
 
         return Decimal(str(total_cost)) / Decimal(str(total_volume))
 
+    def _print_portfolio_status(self) -> None:
+        """Print current portfolio status."""
+        # Calculate total portfolio value
+        portfolio_value = self.available_balance
+        for symbol, balance in self.allocated_balances.items():
+            portfolio_value += balance
+
+        for symbol, volume in self.positions.items():
+            price = self.client.get_latest_price(symbol)
+            if price:
+                portfolio_value += volume * price
+
+        # Calculate profit/loss
+        profit = portfolio_value - self.initial_balance
+        profit_percent = (profit / self.initial_balance * 100) if self.initial_balance > 0 else Decimal('0')
+
+        # Calculate time elapsed
+        if self.start_time:
+            elapsed_seconds = int(time.time()) - self.start_time
+            elapsed_hours = elapsed_seconds // 3600
+            elapsed_minutes = (elapsed_seconds % 3600) // 60
+            elapsed_seconds = elapsed_seconds % 60
+            time_str = f"{elapsed_hours}h {elapsed_minutes}m {elapsed_seconds}s"
+        else:
+            time_str = "N/A"
+
+        print("\n📈 PORTFOLIO STATUS 📈")
+        print(f"⏱️ Session Duration: {time_str}")
+        print(f"🎯 Active Symbol: {self.active_symbol or 'None'}")
+        print(f"💵 Available Balance: {self.available_balance:.2f} USDT")
+
+        # Show active positions
+        if self.positions:
+            print("\n📊 Active Positions:")
+            for symbol, volume in self.positions.items():
+                price = self.client.get_latest_price(symbol)
+                value = volume * price if price else Decimal('0')
+                avg_buy = self._get_average_buy_price(symbol)
+
+                if avg_buy:
+                    position_profit = (price / avg_buy - 1) * 100 if price else Decimal('0')
+                    profit_emoji = "🟢" if position_profit > 0 else "🔴"
+                    print(f"  {profit_emoji} {symbol}: {volume:.6f} @ avg {avg_buy:.4f} "
+                          f"(Current: {price:.4f}, P/L: {position_profit:.2f}%, Value: {value:.2f} USDT)")
+                else:
+                    print(f"  {symbol}: {volume:.6f} (Value: {value:.2f} USDT)")
+
+        print(f"\n💰 Total Portfolio Value: {portfolio_value:.2f} USDT")
+
+        # Show profit/loss with color indicators
+        if profit > 0:
+            print(f"📊 Profit/Loss: 🟢 +{profit:.2f} USDT (+{profit_percent:.2f}%)")
+        elif profit < 0:
+            print(f"📊 Profit/Loss: 🔴 {profit:.2f} USDT ({profit_percent:.2f}%)")
+        else:
+            print(f"📊 Profit/Loss: {profit:.2f} USDT ({profit_percent:.2f}%)")
+
+        # Show performance metrics
+        if self.total_trades > 0:
+            win_rate = (self.profitable_trades / self.total_trades) * 100
+            print(f"🔄 Trades: {self.total_trades} (Win Rate: {win_rate:.2f}%)")
+        else:
+            print("🔄 Trades: 0")
+
+        print("-" * 40)
+
