@@ -141,7 +141,7 @@ class KrakenClient:
 
         Args:
             symbol: Trading pair symbol (e.g. 'BTC/USD')
-            interval: Candle interval in minutes (1, 5, 15, 30, 60, 240, 1440, 10080, 21600)
+            interval: Candle interval in minutes
         """
         if not self.ws:
             success = await self.connect()
