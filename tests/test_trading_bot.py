@@ -278,3 +278,29 @@ class TestTradingBot:
         assert trading_bot.execution_history['BTC/USDT'][0]['action'] == 'buy'
         assert trading_bot.total_trades == 1
 
+    def test_execute_sell(self, trading_bot):
+        """Test sell execution."""
+        trading_bot.positions['BTC/USDT'] = Decimal('0.5')
+        trading_bot.allocated_balances['BTC/USDT'] = Decimal('200')
+
+        # Add a previous buy to history for P/L calculation
+        trading_bot.execution_history['BTC/USDT'] = [{
+            "timestamp": 1000,
+            "action": "buy",
+            "symbol": "BTC/USDT",
+            "price": 90.0,
+            "volume": 0.5,
+            "cost": 45.0,
+            "balance_after": 155.0
+        }]
+
+        result = trading_bot._execute_sell('BTC/USDT', Decimal('100'))
+
+        assert result is True
+        assert 'BTC/USDT' not in trading_bot.positions  # Position should be closed
+        assert trading_bot.allocated_balances['BTC/USDT'] > Decimal('200')  # Balance should increase
+        assert len(trading_bot.execution_history['BTC/USDT']) == 2
+        assert trading_bot.execution_history['BTC/USDT'][1]['action'] == 'sell'
+        assert trading_bot.total_trades == 1
+        assert trading_bot.profitable_trades == 1  # Sold at 100, bought at 90 -> profit
+
