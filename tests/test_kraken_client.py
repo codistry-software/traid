@@ -2,15 +2,13 @@
 Refactored tests for Kraken WebSocket client.
 Matches the current KrakenClient implementation.
 """
-import asyncio
 import json
 from decimal import Decimal
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock
 
 import pytest
-import aiohttp
 
-from traid.data.clients.kraken_client import KrakenClient
+from traid.kraken_client import KrakenClient
 
 
 @pytest.fixture
@@ -167,7 +165,6 @@ def test_reverse_format_symbol(client):
 
 
 import pytest
-import ssl
 import asyncio
 
 @pytest.mark.asyncio

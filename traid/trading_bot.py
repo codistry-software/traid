@@ -292,6 +292,63 @@ class TradingBot:
 
         return self.opportunity_scores
 
+    def _calculate_coin_score(self, symbol: str, prices: np.ndarray, volumes: np.ndarray) -> int:
+        """Calculate opportunity score for a single coin (more aggressive)."""
+        # Base score starts at 50 (neutral)
+        score = 50
+
+        try:
+            # Check if we have enough data
+            if len(prices) < 10:
+                return 50
+
+            # Calculate price changes
+            if len(prices) >= 2:
+                recent_change = (prices[-1] / prices[-2] - 1) * 100
+                # Reward recent price increases more aggressively
+                if recent_change > 1:
+                    score += recent_change * 2  # Double weight for upward movement
+                elif recent_change < -1:
+                    score -= abs(recent_change)
+
+            # Calculate RSI
+            rsi = self._calculate_rsi(prices)
+
+            # RSI component - more aggressive weighting
+            if rsi < 30:  # Oversold - buying opportunity
+                score += (30 - rsi) * 1.5
+            elif rsi > 70:  # Overbought - selling opportunity
+                score -= (rsi - 70) * 1.5
+
+            # Price trend component - shorter timeframes for faster response
+            if len(prices) >= 6:
+                short_ma = np.mean(prices[-3:])  # 3-period MA (was 5)
+                long_ma = np.mean(prices[-6:])  # 6-period MA (was 10)
+
+                # More aggressive scoring for uptrends
+                if short_ma > long_ma:  # Uptrend
+                    trend_strength = (short_ma / long_ma - 1) * 100
+                    score += 10 + trend_strength
+                else:  # Downtrend
+                    trend_weakness = (1 - short_ma / long_ma) * 100
+                    score -= 10 + trend_weakness
+
+            # Volume component - more aggressive
+            if len(volumes) >= 3:
+                avg_volume = np.mean(volumes[-4:-1])  # Last 3 periods excluding current
+                current_volume = volumes[-1]
+
+                # Higher volume is more important
+                if current_volume > avg_volume * 1.5:
+                    volume_increase = (current_volume / avg_volume - 1) * 10
+                    score += 10 + volume_increase
+
+        except Exception as e:
+            print(f"Error in score calculation: {e}")
+
+        # Ensure score is within 0-100 range
+        return max(0, min(100, int(score)))
+
     def _calculate_rsi(self, prices: np.ndarray, period: int = 14) -> float:
         """Calculate Relative Strength Index."""
         if len(prices) < period + 1:
