@@ -178,7 +178,12 @@ class MultiCoinTradingBot:
                 # Calculate opportunity scores
                 scores = self.analyzer.calculate_opportunity_scores()
 
-                if scores:
+                if scores and any(score != 50 for score in scores.values()):
+                    # Mark analysis as complete if it wasn't already
+                    if not self._analysis_complete:
+                        print("Market analysis now has meaningful scores. Trading can begin.")
+                        self._analysis_complete = True
+
                     # Log current opportunities
                     top_opportunities = self.analyzer.get_best_opportunities(3)
 
@@ -199,6 +204,7 @@ class MultiCoinTradingBot:
                         # No active coin yet, select the best one
                         if top_opportunities:
                             best_symbol, _ = top_opportunities[0]
+                            print(f"Selecting {best_symbol} for trading based on analysis...")
                             await self._switch_active_coin(best_symbol)
 
                 # Wait before next analysis
