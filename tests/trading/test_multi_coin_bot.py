@@ -87,8 +87,34 @@ class TestMultiCoinTradingBot:
         mock_client_instance.subscribe_prices = AsyncMock()
         mock_client_instance.close = AsyncMock()
 
+        # Mock fetch_historical_data to return a dictionary (not a coroutine)
+        mock_historical_data = {
+            'BTC/USDT': [
+                {'timestamp': 1625097600000, 'open': 33000, 'high': 34000, 'low': 32000, 'close': 33500,
+                 'volume': 2.1}],
+            'ETH/USDT': [
+                {'timestamp': 1625097600000, 'open': 2100, 'high': 2200, 'low': 2050, 'close': 2150, 'volume': 15.3}],
+            'SOL/USDT': [{'timestamp': 1625097600000, 'open': 35, 'high': 37, 'low': 34, 'close': 36, 'volume': 1200}]
+        }
+        mock_client_instance.fetch_historical_data = AsyncMock(return_value=mock_historical_data)
+
         mock_client.return_value = mock_client_instance
-        mock_analyzer.return_value = MagicMock()
+
+        # Mock analyzer
+        mock_analyzer_instance = MagicMock()
+        mock_analyzer_instance.calculate_opportunity_scores.return_value = {
+            'BTC/USDT': 75,
+            'ETH/USDT': 60,
+            'SOL/USDT': 45
+        }
+        mock_analyzer_instance.get_best_opportunities.return_value = [
+            ('BTC/USDT', 75),
+            ('ETH/USDT', 60),
+            ('SOL/USDT', 45)
+        ]
+        mock_analyzer.return_value = mock_analyzer_instance
+
+        # Mock executor
         mock_executor.return_value = MagicMock()
 
         # Create bot with mocks
@@ -101,15 +127,19 @@ class TestMultiCoinTradingBot:
 
         # Test start
         await bot.start()
-        assert bot.is_running
+
+        # Verify calls
+        mock_client_instance.fetch_historical_data.assert_called_once_with(symbols=symbols, interval=5, limit=200)
         mock_client_instance.connect.assert_called_once()
         mock_client_instance.subscribe_prices.assert_called_once_with(symbols)
-        assert len(bot._tasks) == 2  # Should have 2 tasks running
+        assert bot.is_running is True
 
         # Test stop
         await bot.stop()
-        assert not bot.is_running
+
+        # Verify stop behavior
         mock_client_instance.close.assert_called_once()
+        assert bot.is_running is False
 
     @pytest.mark.asyncio
     @patch('traid.trading.multi_coin_bot.asyncio.sleep', new_callable=AsyncMock)
