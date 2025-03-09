@@ -252,9 +252,7 @@ class KrakenClient:
                     status = data.get("status")
                     pair = data.get("pair")
 
-                    if status == "subscribed":
-                        print(f"Successfully subscribed to {pair}")
-                    elif status == "error":
+                    if status == "error":
                         print(f"Subscription error for {pair}: {data.get('errorMessage')}")
 
         except json.JSONDecodeError:
