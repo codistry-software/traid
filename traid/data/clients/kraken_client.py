@@ -204,7 +204,7 @@ class KrakenClient:
         """Process incoming WebSocket message.
 
         Args:
-            message: Raw WebSocket message
+            message: Raw JSON string from WebSocket.
         """
         if not message:
             return
@@ -218,16 +218,16 @@ class KrakenClient:
                     symbol = data[3]
                     price_data = data[1]
 
-                    if "c" in price_data:  # "c" contains last trade price
+                    if "c" in price_data:
                         standard_symbol = self._reverse_format_symbol(symbol)
 
                         # Update our price cache
                         self.price_data[standard_symbol] = {
                             "price": Decimal(price_data["c"][0]),
                             "timestamp": int(time.time() * 1000),
-                            "volume": Decimal(price_data["v"][1]),  # 24h volume
-                            "low": Decimal(price_data["l"][1]),  # 24h low
-                            "high": Decimal(price_data["h"][1]),  # 24h high
+                            "volume": Decimal(price_data["v"][1]),
+                            "low": Decimal(price_data["l"][1]),
+                            "high": Decimal(price_data["h"][1]),
                         }
 
                         # Call the callback if registered
@@ -238,44 +238,37 @@ class KrakenClient:
                             }
                             self.on_price_update(update)
 
-                # Add handling for OHLCV data
+                # Handle OHLCV updates
                 elif data[2] == "ohlc":
                     symbol = data[3]
                     ohlc_data = data[1]
-
-                    # Convert symbol to standard format if necessary
                     standard_symbol = self._reverse_format_symbol(symbol)
 
-                    # Initialize the dictionary for this symbol if it doesn't exist
                     if standard_symbol not in self.ohlcv_data:
                         self.ohlcv_data[standard_symbol] = []
 
-                    # Parse the OHLCV data and add to our cache
                     candle = {
                         "timestamp": int(ohlc_data[0]),
                         "open": Decimal(ohlc_data[1]),
                         "high": Decimal(ohlc_data[2]),
                         "low": Decimal(ohlc_data[3]),
                         "close": Decimal(ohlc_data[4]),
-                        "volume": Decimal(ohlc_data[6])  # Assuming position 6 is volume based on your test
+                        "volume": Decimal(ohlc_data[6])
                     }
 
-                    # Check if a candle with this timestamp already exists
-                    timestamp = int(ohlc_data[0])
+                    timestamp = candle["timestamp"]
                     updated_existing = False
 
                     for i, existing_candle in enumerate(self.ohlcv_data[standard_symbol]):
                         if existing_candle["timestamp"] == timestamp:
-                            # Update the existing candle instead of adding a new one
                             self.ohlcv_data[standard_symbol][i] = candle
                             updated_existing = True
                             break
 
-                    # Only append if we didn't update an existing candle
                     if not updated_existing:
                         self.ohlcv_data[standard_symbol].append(candle)
 
-                    # Call the callback if registered
+                    # If you had an OHLCV callback, call it here
                     if hasattr(self, 'on_ohlcv_update') and self.on_ohlcv_update:
                         update = {
                             "symbol": standard_symbol,
@@ -288,7 +281,6 @@ class KrakenClient:
                 if data["event"] == "subscriptionStatus":
                     status = data.get("status")
                     pair = data.get("pair")
-
                     if status == "error":
                         print(f"Subscription error for {pair}: {data.get('errorMessage')}")
 
