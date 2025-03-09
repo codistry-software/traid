@@ -326,7 +326,7 @@ class KrakenClient:
         return None
 
     async def fetch_historical_data(self, symbols, interval=5, limit=200):
-        """Fetch historical OHLCV data from Kraken API.
+        """Fetch historical OHLCV data from Kraken REST API.
 
         Args:
             symbols: List of trading pair symbols
@@ -334,17 +334,15 @@ class KrakenClient:
             limit: Number of candles to fetch per symbol
 
         Returns:
-            Dict mapping symbols to lists of OHLCV data
+            Dict mapping symbols to lists of OHLCV data (or False on complete failure).
         """
-        # Map minutes to Kraken interval format
         interval_map = {
             1: 1, 5: 5, 15: 15, 30: 30,
             60: 60, 240: 240, 1440: 1440,
             10080: 10080, 21600: 21600
         }
-
         if interval not in interval_map:
-            interval = 5  # Default to 5 minutes if invalid interval
+            interval = 5
 
         kraken_interval = interval_map[interval]
         historical_data = {}
@@ -354,8 +352,6 @@ class KrakenClient:
             try:
                 formatted_symbol = self._format_symbol(symbol)
                 endpoint = f"{self.REST_API_URL}/OHLC"
-
-                # Prepare request parameters
                 params = {
                     "pair": formatted_symbol.replace("/", ""),
                     "interval": kraken_interval
@@ -367,11 +363,9 @@ class KrakenClient:
                     ssl_context.verify_mode = ssl.CERT_NONE
 
                     try:
-                        # Make API request
                         async with session.get(endpoint, params=params, ssl=ssl_context) as response:
                             if response.status == 200:
                                 data = await response.json()
-
                                 if "result" in data and data["error"] == [] and data["result"]:
                                     pair_data = list(data["result"].keys())[0]
                                     ohlc_data = data["result"][pair_data]
@@ -380,24 +374,19 @@ class KrakenClient:
                                         failed_symbols.append((symbol, "Empty OHLC data returned"))
                                         continue
 
-                                    # Initialize data array for this symbol
                                     historical_data[symbol] = []
-
-                                    # Process all candles (up to limit)
                                     for candle in ohlc_data[-limit:]:
-                                        timestamp, open_price, high, low, close, vwap, volume, count = candle
-
-                                        # Store normalized data
+                                        timestamp, open_price, high, low, close, vwap, vol, count = candle
                                         historical_data[symbol].append({
                                             "timestamp": int(timestamp),
                                             "open": float(open_price),
                                             "high": float(high),
                                             "low": float(low),
                                             "close": float(close),
-                                            "volume": float(volume)
+                                            "volume": float(vol)
                                         })
                                 else:
-                                    error_msg = "API error"
+                                    error_msg = "Unknown API error"
                                     if "error" in data and data["error"]:
                                         error_msg = f"API error: {data['error']}"
                                     failed_symbols.append((symbol, error_msg))
@@ -412,12 +401,10 @@ class KrakenClient:
                 print(f"Error processing {symbol}: {str(e)}")
                 print(traceback.format_exc())
 
-        # Print summary
         print(f"Fetched historical data: {len(historical_data)}/{len(symbols)} symbols successful")
         if failed_symbols:
-            print(f"Failed to fetch data for {len(failed_symbols)} symbols")
+            print(f"Failed to fetch data for {len(failed_symbols)} symbols: {failed_symbols}")
 
-        # If all symbols failed, return False to indicate complete failure
         if len(failed_symbols) == len(symbols):
             return False
 
