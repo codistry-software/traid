@@ -171,21 +171,34 @@ class KrakenClient:
             self.subscriptions.add(formatted_symbol)
 
     async def _message_handler(self) -> None:
-        """Handle incoming WebSocket messages."""
+        """Single task that continuously reads messages from WebSocket."""
         while self.running:
-            try:
-                if self.ws:
-                    message = await self.ws.recv()
-                    await self._process_message(message)
-            except websockets.exceptions.ConnectionClosed:
-                print("WebSocket connection closed. Reconnecting...")
+            # Ensure we have an active connection
+            if not self.ws:
                 success = await self.connect()
+                if not success:
+                    print("Failed to reconnect, stopping _message_handler.")
+                    self.running = False
+                    break
+
+            try:
+                # Read one message from the WS
+                message = await self.ws.recv()
+                await self._process_message(message)
+
+            except websockets.exceptions.ConnectionClosed:
+                print("WebSocket connection closed. Trying a single reconnect...")
+                success = await self._reconnect_once()
                 if not success:
                     print("Failed to reconnect. Stopping message handler.")
                     self.running = False
+
             except Exception as e:
                 print(f"Error processing message: {e}")
+                # A short sleep to prevent busy-loop if repeated errors occur
                 await asyncio.sleep(1)
+
+        print("Exiting _message_handler loop.")
 
     async def _process_message(self, message: str) -> None:
         """Process incoming WebSocket message.
