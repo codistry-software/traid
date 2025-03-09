@@ -476,3 +476,61 @@ class TradingBot:
         print(f"🔵 BOUGHT {volume:.6f} {symbol} at {price} USDT (Total: {cost:.2f} USDT)")
         return True
 
+    def _execute_sell(self, symbol: str, price: Decimal, volume: Optional[Decimal] = None) -> bool:
+        """Execute a sell order."""
+        if price <= 0:
+            print(f"Invalid price for {symbol}: {price}")
+            return False
+
+        if symbol not in self.positions or self.positions[symbol] <= 0:
+            print(f"No position to sell for {symbol}")
+            return False
+
+        # Use all available volume if not specified
+        if volume is None or volume > self.positions[symbol]:
+            volume = self.positions[symbol]
+
+        revenue = price * volume
+
+        # Update balance
+        self.allocated_balances[symbol] += revenue
+
+        # Update position
+        self.positions[symbol] -= volume
+        if self.positions[symbol] == Decimal('0'):
+            del self.positions[symbol]
+
+        # Record trade
+        timestamp = int(time.time())
+        trade_details = {
+            "timestamp": timestamp,
+            "action": "sell",
+            "symbol": symbol,
+            "price": float(price),
+            "volume": float(volume),
+            "revenue": float(revenue),
+            "balance_after": float(self.allocated_balances[symbol])
+        }
+
+        self.execution_history[symbol].append(trade_details)
+        self.total_trades += 1
+
+        # Check if profitable
+        buy_price = self._get_average_buy_price(symbol)
+        if buy_price:
+            profit = volume * (price - buy_price)
+            profit_percent = (price / buy_price - 1) * 100
+
+            if price > buy_price:
+                self.profitable_trades += 1
+                self.total_profit_loss += profit
+                print(
+                    f"🟢 SOLD {volume:.6f} {symbol} at {price} USDT - PROFIT: {profit:.2f} USDT (+{profit_percent:.2f}%)")
+            else:
+                self.total_profit_loss += profit
+                print(f"🔴 SOLD {volume:.6f} {symbol} at {price} USDT - LOSS: {profit:.2f} USDT ({profit_percent:.2f}%)")
+        else:
+            print(f"🟡 SOLD {volume:.6f} {symbol} at {price} USDT (Total: {revenue:.2f} USDT)")
+
+        return True
+
