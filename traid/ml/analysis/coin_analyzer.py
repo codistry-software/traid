@@ -50,6 +50,9 @@ class CoinOpportunityAnalyzer:
             price: Current price
             volume: Current trading volume
         """
+        if price <= 0 or volume < 0:
+            raise ValueError(f"Invalid price or volume for {symbol}: price={price}, volume={volume}")
+
         timestamp = int(time.time())
 
         if symbol not in self.coin_data:
