@@ -43,7 +43,15 @@ async def get_all_kraken_pairs():
             print("Warning: No USDT pairs found. Using default set.")
             return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "ADA/USDT"]
 
-        print(f"Found {len(usdt_pairs)} USDT trading pairs on Kraken")
+        print(f"Found {len(usdt_pairs)} non-stable USDT trading pairs on Kraken")
+
+        # Ensure we include the major crypto pairs
+        major_pairs = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "ADA/USDT"]
+        for pair in major_pairs:
+            if pair not in usdt_pairs:
+                usdt_pairs.append(pair)
+                print(f"Added major pair {pair} that was missing from API response")
+
         return usdt_pairs
 
     except Exception as e:
