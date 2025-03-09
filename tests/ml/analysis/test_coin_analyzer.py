@@ -140,3 +140,35 @@ def test_load_market_data():
     assert analyzer.coin_data[symbol]['prices'] == [35800.0, 36500.0, 37000.0]
     assert analyzer.coin_data[symbol]['volumes'] == [2.5, 3.1, 2.8]
     assert analyzer.coin_data[symbol]['timestamps'] == [1625097600000, 1625184000000, 1625270400000]
+
+def test_update_with_real_time_data():
+    """Test updating coin data with real-time data."""
+    # Create instance of CoinOpportunityAnalyzer
+    analyzer = CoinOpportunityAnalyzer(lookback_window=10)
+
+    # Test symbol and data
+    symbol = "ETH/USD"
+    price = Decimal("1800.50")
+    volume = Decimal("3.25")
+
+    # Call the method
+    analyzer.update_with_real_time_data(symbol, price, volume)
+
+    # Assertions
+    assert symbol in analyzer.coin_data
+    assert len(analyzer.coin_data[symbol]["prices"]) == 1
+    assert analyzer.coin_data[symbol]["prices"][0] == 1800.5
+    assert analyzer.coin_data[symbol]["volumes"][0] == 3.25
+    assert isinstance(analyzer.coin_data[symbol]["timestamps"][0], int)
+
+    # Add another data point
+    new_price = Decimal("1810.75")
+    new_volume = Decimal("2.5")
+
+    # Call the method again
+    analyzer.update_with_real_time_data(symbol, new_price, new_volume)
+
+    # Assertions after second update
+    assert len(analyzer.coin_data[symbol]["prices"]) == 2
+    assert analyzer.coin_data[symbol]["prices"][1] == 1810.75
+    assert analyzer.coin_data[symbol]["volumes"][1] == 2.5
