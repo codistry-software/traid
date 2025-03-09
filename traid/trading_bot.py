@@ -419,3 +419,60 @@ class TradingBot:
                     return -1
 
         return 0
+
+    def _execute_buy(self, symbol: str, price: Decimal, volume: Optional[Decimal] = None) -> bool:
+        """Execute a buy order (more aggressive)."""
+        if price <= 0:
+            print(f"Invalid price for {symbol}: {price}")
+            return False
+
+        available_balance = self.allocated_balances.get(symbol, Decimal('0'))
+
+        if available_balance <= 0:
+            print(f"No balance allocated for {symbol}")
+            return False
+
+        # Calculate volume if not provided - use 95% of available balance (was 90%)
+        if volume is None:
+            position_value = available_balance * Decimal('0.95')  # More aggressive allocation
+            volume = position_value / price
+
+        # Minimum volume check
+        if volume < Decimal('0.0001'):
+            print(f"Volume too small for {symbol}: {volume}")
+            return False
+
+        cost = price * volume
+
+        # Check if we have enough balance
+        if cost > available_balance:
+            # Use all available balance instead of failing
+            volume = available_balance / price
+            cost = price * volume
+
+        # Update balance
+        self.allocated_balances[symbol] -= cost
+
+        # Update position
+        if symbol not in self.positions:
+            self.positions[symbol] = Decimal('0')
+        self.positions[symbol] += volume
+
+        # Record trade
+        timestamp = int(time.time())
+        trade_details = {
+            "timestamp": timestamp,
+            "action": "buy",
+            "symbol": symbol,
+            "price": float(price),
+            "volume": float(volume),
+            "cost": float(cost),
+            "balance_after": float(self.allocated_balances[symbol])
+        }
+
+        self.execution_history[symbol].append(trade_details)
+        self.total_trades += 1
+
+        print(f"🔵 BOUGHT {volume:.6f} {symbol} at {price} USDT (Total: {cost:.2f} USDT)")
+        return True
+
