@@ -615,7 +615,7 @@ class TradingBot:
 
         print("-" * 40)
 
-   def _print_summary(self) -> None:
+    def _print_summary(self) -> None:
         """Print trading session summary."""
         # Calculate session duration
         if self.start_time:
@@ -676,4 +676,3 @@ class TradingBot:
                 print(f"  {symbol}: {volume:.6f} (Value: {value:.2f} USDT)")
 
         print("\n" + "=" * 50)
-
