@@ -304,3 +304,29 @@ class TestTradingBot:
         assert trading_bot.total_trades == 1
         assert trading_bot.profitable_trades == 1  # Sold at 100, bought at 90 -> profit
 
+    def test_get_average_buy_price(self, trading_bot):
+        """Test average buy price calculation."""
+        trading_bot.execution_history['BTC/USDT'] = [
+            {
+                "timestamp": 1000,
+                "action": "buy",
+                "symbol": "BTC/USDT",
+                "price": 90.0,
+                "volume": 0.5,
+                "cost": 45.0,
+                "balance_after": 955.0
+            },
+            {
+                "timestamp": 1060,
+                "action": "buy",
+                "symbol": "BTC/USDT",
+                "price": 100.0,
+                "volume": 0.5,
+                "cost": 50.0,
+                "balance_after": 905.0
+            }
+        ]
+
+        avg_price = trading_bot._get_average_buy_price('BTC/USDT')
+        assert avg_price == Decimal('95')  # (45 + 50) / (0.5 + 0.5) = 95
+
