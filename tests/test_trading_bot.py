@@ -340,3 +340,20 @@ class TestTradingBot:
         total_value = trading_bot._calculate_total_portfolio_value()
         assert total_value == Decimal('650')  # 300 + 200 + 100 + (0.5 * 100)
 
+    def test_print_portfolio_status(self, trading_bot, capsys):
+        """Test portfolio status printing."""
+        trading_bot.available_balance = Decimal('500')
+        trading_bot.active_symbol = 'BTC/USDT'
+        trading_bot.positions['BTC/USDT'] = Decimal('0.5')
+        trading_bot.initial_balance = Decimal('1000')
+        trading_bot.start_time = 1000  # Some time in the past
+
+        # Mock functions used in status printing
+        with patch.object(trading_bot, '_calculate_total_portfolio_value', return_value=Decimal('1050')), \
+                patch.object(trading_bot, '_get_average_buy_price', return_value=Decimal('90')), \
+                patch.object(trading_bot, '_elapsed_time_str', return_value="1h 0m 0s"):
+            trading_bot._print_portfolio_status()
+            captured = capsys.readouterr()
+            assert "PORTFOLIO STATUS" in captured.out
+            assert "Total Portfolio Value: 1050.00 USDT" in captured.out
+            assert "Profit/Loss: 🟢 +50.00 USDT" in captured.out
