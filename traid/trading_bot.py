@@ -112,3 +112,61 @@ class TradingBot:
             self.coin_data[symbol]['timestamps'] = self.coin_data[symbol]['timestamps'][-max_history:]
 
     async def start(self) -> None:
+        """Start the trading bot."""
+        if self.is_running:
+            return
+
+        self.is_running = True
+        self._stop_event.clear()
+        self.start_time = int(time.time())
+
+        # Connect to WebSocket and subscribe to symbols
+        print("📡 Connecting to Kraken WebSocket API...")
+        await self.client.connect()
+
+        print(f"🔔 Subscribing to {len(self.symbols)} trading pairs...")
+        await self.client.subscribe_prices(self.symbols)
+
+        # Fetch historical data
+        print("📊 Fetching historical data...")
+        historical_data = await self.client.fetch_historical_data(
+            symbols=self.symbols,
+            interval=5,
+            limit=50
+        )
+
+        # Load historical data
+        for symbol, ohlcv_data in historical_data.items():
+            self.coin_data[symbol] = {
+                'prices': [candle['close'] for candle in ohlcv_data],
+                'volumes': [candle['volume'] for candle in ohlcv_data],
+                'timestamps': [candle['timestamp'] for candle in ohlcv_data]
+            }
+
+        # Calculate initial opportunity scores
+        self._calculate_opportunity_scores()
+
+        # Print top opportunities
+        top_opportunities = self._get_top_opportunities(5)
+        print("\n🔥 Initial Top Trading Opportunities:")
+        for symbol, score in top_opportunities:
+            print(f"  {symbol}: Score {score}/100")
+
+        # Set initial active symbol
+        if not self.single_coin_mode:
+            top_coin = self._get_best_opportunity()
+            if top_coin:
+                print(f"\n🎯 Selected {top_coin} as initial trading target")
+                await self._switch_active_coin(top_coin)
+        else:
+            print(f"\n🎯 Trading single coin: {self.active_symbol}")
+
+        # Start the trading loops
+        self._tasks = [
+            asyncio.create_task(self._analysis_loop()),
+            asyncio.create_task(self._trading_loop())
+        ]
+
+        print("\n✅ Trading bot is now active")
+        print(f"💪 Strategy: {'AGGRESSIVE' if not self.single_coin_mode else 'SINGLE-COIN FOCUS'}")
+        self._print_portfolio_status()
