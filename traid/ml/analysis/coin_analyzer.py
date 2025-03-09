@@ -93,13 +93,17 @@ class CoinOpportunityAnalyzer:
                 self.opportunity_scores[symbol] = 50  # Neutral score
                 continue
 
-            # Convert to numpy arrays for technical indicators
-            prices = np.array(data['prices'])
-            volumes = np.array(data['volumes'])
+            try:
+                # Convert to numpy arrays for technical indicators
+                prices = np.array(data['prices'])
+                volumes = np.array(data['volumes'])
 
-            # Calculate opportunity score
-            score = self._calculate_coin_score(symbol, prices, volumes)
-            self.opportunity_scores[symbol] = score
+                # Calculate opportunity score
+                score = self._calculate_coin_score(symbol, prices, volumes)
+                self.opportunity_scores[symbol] = score
+
+            except Exception as e:
+                self.opportunity_scores[symbol] = 50  # Neutral on error
 
         return self.opportunity_scores
 
