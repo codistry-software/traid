@@ -352,3 +352,35 @@ class TradingBot:
             return best_coin
 
         return None
+
+    async def _switch_active_coin(self, new_symbol: str) -> None:
+        """Switch trading to a different coin."""
+        if new_symbol not in self.symbols:
+            print(f"Cannot switch to {new_symbol}: not in monitored symbols")
+            return
+
+        # If we have an active symbol, liquidate positions
+        if self.active_symbol:
+            # Sell all positions
+            if self.active_symbol in self.positions and self.positions[self.active_symbol] > 0:
+                price = self.client.get_latest_price(self.active_symbol)
+                if price:
+                    self._execute_sell(self.active_symbol, price, self.positions[self.active_symbol])
+                else:
+                    print(f"⚠️ Warning: Could not get price for {self.active_symbol}, positions not liquidated")
+
+            # Update available balance
+            self.available_balance += self.allocated_balances[self.active_symbol]
+            self.allocated_balances[self.active_symbol] = Decimal('0')
+
+        # Set new active symbol
+        old_symbol = self.active_symbol
+        self.active_symbol = new_symbol
+
+        # Allocate balance to new symbol (80% of available - more aggressive than before)
+        allocation = self.available_balance * Decimal('0.8')  # Was 70% before
+        self.allocated_balances[new_symbol] = allocation
+        self.available_balance -= allocation
+
+        print(f"🔄 SWITCHED from {old_symbol if old_symbol else 'none'} to {new_symbol}")
+        print(f"💰 Allocated {allocation:.2f} USDT to {new_symbol}")
