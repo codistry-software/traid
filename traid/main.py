@@ -112,7 +112,7 @@ async def run_bot():
             single_coin_mode=True
         )
     else:
-        # Multi-coin mode (new functionality)
+        # Multi-coin mode
         all_pairs = await get_all_kraken_pairs()
 
         print(f"\nStarting bot with:")
@@ -123,11 +123,12 @@ async def run_bot():
         print("\nThe bot will automatically analyze all coins and select the best trading opportunities.")
 
         # Create and start multi-coin bot
-        bot = MultiCoinTradingBot(
+        bot = TradingBot(
             symbols=all_pairs,
             timeframe=TIMEFRAME,
             initial_balance=INITIAL_BALANCE,
-            update_interval=30  # Update every 30 seconds
+            client=client,
+            single_coin_mode=False
         )
 
     try:
