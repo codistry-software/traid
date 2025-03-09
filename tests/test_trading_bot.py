@@ -104,3 +104,21 @@ class TestTradingBot:
             trading_bot.client.connect.assert_called_once()
             trading_bot.client.subscribe_prices.assert_called_once_with(['BTC/USDT', 'ETH/USDT', 'XRP/USDT'])
             trading_bot.client.fetch_historical_data.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_stop(self, trading_bot):
+        """Test bot shutdown process."""
+        trading_bot.is_running = True
+
+        # Create actual coroutines instead of MagicMocks
+        async def dummy_coro():
+            pass
+
+        task1 = asyncio.create_task(dummy_coro())
+        task2 = asyncio.create_task(dummy_coro())
+        trading_bot._tasks = [task1, task2]
+
+        with patch.object(trading_bot, '_print_summary'):
+            await trading_bot.stop()
+            assert trading_bot.is_running is False
+            trading_bot.client.close.assert_called_once()
