@@ -90,3 +90,17 @@ class TestTradingBot:
 
         assert len(trading_bot.coin_data["BTC/USDT"]["prices"]) == 50
         assert trading_bot.coin_data["BTC/USDT"]["prices"][-1] == 59  # Should have the latest value
+
+    @pytest.mark.asyncio
+    async def test_start(self, trading_bot):
+        """Test bot startup process."""
+        with patch.object(trading_bot, '_calculate_opportunity_scores', return_value={}), \
+                patch.object(trading_bot, '_get_top_opportunities', return_value=[('BTC/USDT', 80)]), \
+                patch.object(trading_bot, '_print_portfolio_status'), \
+                patch.object(asyncio, 'create_task', return_value=MagicMock()):
+            await trading_bot.start()
+            assert trading_bot.is_running is True
+            assert trading_bot.start_time is not None
+            trading_bot.client.connect.assert_called_once()
+            trading_bot.client.subscribe_prices.assert_called_once_with(['BTC/USDT', 'ETH/USDT', 'XRP/USDT'])
+            trading_bot.client.fetch_historical_data.assert_called_once()
