@@ -390,6 +390,10 @@ class KrakenClient:
         if failed_symbols:
             print(f"Failed to fetch data for {len(failed_symbols)} symbols")
 
+        # If all symbols failed, return False to indicate complete failure
+        if len(failed_symbols) == len(symbols):
+            return False
+
         return historical_data
 
     def _format_symbol(self, symbol: str) -> str:
