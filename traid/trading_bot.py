@@ -329,3 +329,8 @@ class TradingBot:
         )
 
         return sorted_opportunities[:top_n]
+
+    def _get_best_opportunity(self) -> Optional[str]:
+        """Get the best opportunity coin."""
+        top_opportunities = self._get_top_opportunities(1)
+        return top_opportunities[0][0] if top_opportunities else None
