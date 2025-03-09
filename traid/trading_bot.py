@@ -384,3 +384,38 @@ class TradingBot:
 
         print(f"🔄 SWITCHED from {old_symbol if old_symbol else 'none'} to {new_symbol}")
         print(f"💰 Allocated {allocation:.2f} USDT to {new_symbol}")
+
+    def _generate_trading_signal(self, symbol: str) -> int:
+        """Generate trading signal for a symbol (more aggressive).
+
+        Returns:
+            int: 1 for buy, -1 for sell, 0 for hold
+        """
+        if symbol not in self.coin_data or len(self.coin_data[symbol]['prices']) < 14:
+            return 0
+
+        prices = np.array(self.coin_data[symbol]['prices'])
+
+        # Calculate RSI
+        rsi = self._calculate_rsi(prices)
+
+        # Calculate moving averages
+        if len(prices) >= 10:
+            short_ma = np.mean(prices[-3:])  # Shorter window (was 5)
+            long_ma = np.mean(prices[-8:])  # Shorter window (was 10)
+
+            # Buy signal: More aggressive parameters
+            # Buy when RSI < 35 (was 30) or when short MA > long MA with RSI < 65 (was 60)
+            if rsi < 35 or (short_ma > long_ma and rsi < 65):
+                # Check if we already have a position
+                if symbol not in self.positions or self.positions.get(symbol, Decimal('0')) == Decimal('0'):
+                    return 1
+
+            # Sell signal: More aggressive parameters
+            # Sell when RSI > 65 (was 70) or when short MA < long MA with RSI > 35 (was 40)
+            elif rsi > 65 or (short_ma < long_ma and rsi > 35):
+                # Check if we have a position to sell
+                if symbol in self.positions and self.positions.get(symbol, Decimal('0')) > 0:
+                    return -1
+
+        return 0
