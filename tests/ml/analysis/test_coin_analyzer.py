@@ -66,8 +66,8 @@ class TestCoinOpportunityAnalyzer:
         )
 
         # Setup test data
-        prices = np.array([50000.0, 50100.0, 50200.0, 50300.0, 50400.0])
-        volumes = np.array([1.5, 1.6, 1.7, 1.8, 1.9])
+        prices = np.array([50000.0 + i * 100 for i in range(30)])  # 30 data points
+        volumes = np.array([1.5 + i * 0.1 for i in range(30)])  # 30 data points
 
         # Calculate score
         score = analyzer._calculate_coin_score(test_symbol, prices, volumes)
