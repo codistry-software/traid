@@ -334,3 +334,21 @@ class TradingBot:
         """Get the best opportunity coin."""
         top_opportunities = self._get_top_opportunities(1)
         return top_opportunities[0][0] if top_opportunities else None
+
+    def _should_change_coin(self) -> Optional[str]:
+        """Determine if bot should switch to a different coin (more aggressive)."""
+        if not self.opportunity_scores or self.active_symbol not in self.opportunity_scores:
+            return self._get_best_opportunity()
+
+        best_coin = self._get_best_opportunity()
+        if not best_coin:
+            return None
+
+        current_score = self.opportunity_scores[self.active_symbol]
+        best_score = self.opportunity_scores[best_coin]
+
+        # More aggressive coin switching: 10+ points difference instead of 15
+        if best_coin != self.active_symbol and best_score > current_score + 10:
+            return best_coin
+
+        return None
