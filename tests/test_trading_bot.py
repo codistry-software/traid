@@ -196,3 +196,19 @@ class TestTradingBot:
                            111, 113, 115, 114, 116, 118, 120])
         rsi = trading_bot._calculate_rsi(prices)
         assert 0 <= rsi <= 100  # RSI must be between 0 and 100
+
+    def test_get_top_opportunities(self, trading_bot):
+        """Test getting top trading opportunities."""
+        trading_bot.opportunity_scores = {
+            'BTC/USDT': 75,
+            'ETH/USDT': 85,
+            'XRP/USDT': 65,
+            'LTC/USDT': 70
+        }
+
+        top_2 = trading_bot._get_top_opportunities(2)
+        assert len(top_2) == 2
+        assert top_2[0][0] == 'ETH/USDT'
+        assert top_2[0][1] == 85
+        assert top_2[1][0] == 'BTC/USDT'
+        assert top_2[1][1] == 75
