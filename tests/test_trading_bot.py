@@ -66,3 +66,14 @@ class TestTradingBot:
         assert single_coin_bot.active_symbol == 'BTC/USDT'
         assert single_coin_bot.allocated_balances['BTC/USDT'] == Decimal('1000')
         assert single_coin_bot.single_coin_mode is True
+
+    def test_handle_price_update(self, trading_bot):
+        """Test price update handling."""
+        update = {
+            "symbol": "BTC/USDT",
+            "data": {"price": Decimal('110'), "volume": Decimal('20')}
+        }
+        trading_bot._handle_price_update(update)
+        assert trading_bot.current_prices["BTC/USDT"] == Decimal('110')
+        assert 110 in trading_bot.coin_data["BTC/USDT"]["prices"]
+        assert 20 in trading_bot.coin_data["BTC/USDT"]["volumes"]
