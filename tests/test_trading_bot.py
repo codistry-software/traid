@@ -140,3 +140,20 @@ class TestTradingBot:
             await trading_bot._analysis_loop()
             trading_bot._calculate_opportunity_scores.assert_called_once()
             trading_bot._switch_active_coin.assert_called_once_with('ETH/USDT')
+
+    @pytest.mark.asyncio
+    async def test_trading_loop(self, trading_bot):
+        """Test the trading loop functionality."""
+        trading_bot.is_running = True
+        trading_bot.active_symbol = 'BTC/USDT'
+        trading_bot.allocated_balances['BTC/USDT'] = Decimal('500')
+        trading_bot._stop_event = MagicMock()
+        trading_bot._stop_event.is_set.side_effect = [False, True]  # Run once then stop
+
+        with patch.object(trading_bot, '_generate_trading_signal', return_value=1), \
+                patch.object(trading_bot, '_execute_buy', return_value=True), \
+                patch.object(trading_bot, '_print_portfolio_status'), \
+                patch.object(asyncio, 'sleep', new_callable=AsyncMock):
+            await trading_bot._trading_loop()
+            trading_bot._generate_trading_signal.assert_called_once_with('BTC/USDT')
+            trading_bot._execute_buy.assert_called_once_with('BTC/USDT', Decimal('100'))
