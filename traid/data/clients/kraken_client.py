@@ -159,7 +159,7 @@ class KrakenClient:
         print(f"Subscribed to {symbol} OHLCV data, interval {interval}")
 
     async def _subscribe_to_symbol(self, symbol: str) -> None:
-        """Internal method to send subscription message for a symbol."""
+        """Internal helper to subscribe a single symbol to ticker data."""
         formatted_symbol = self._format_symbol(symbol)
         if formatted_symbol not in self.subscriptions:
             message = {
