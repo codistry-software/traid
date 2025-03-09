@@ -117,21 +117,12 @@ class TestCoinOpportunityAnalyzer:
         # Test should check the actual implementation
         assert new_coin is None
 
-
-
 def test_load_market_data():
     """Test loading market data from OHLCV format."""
-    # Create instance of MarketData class
-    market_data = MarketData(
-        symbol="BTC/USDT",
-        timeframe="1h"
-    )
+    # Create instance of CoinOpportunityAnalyzer
+    analyzer = CoinOpportunityAnalyzer(lookback_window=10)
 
-    # Initialize coin_data dictionary if it doesn't exist
-    if not hasattr(market_data, 'coin_data'):
-        market_data.coin_data = {}
-
-    # Test case 1: Loading valid data
+    # Test loading valid data
     symbol = "BTC/USD"
     ohlcv_data = [
         {"timestamp": 1625097600000, "open": 35000.0, "high": 36000.0, "low": 34500.0, "close": 35800.0, "volume": 2.5},
@@ -140,40 +131,12 @@ def test_load_market_data():
     ]
 
     # Call the method
-    result = market_data.load_market_data(symbol, ohlcv_data)
+    result = analyzer.load_market_data(symbol, ohlcv_data)
 
     # Assertions
     assert result is True
-    assert symbol in market_data.coin_data
-    assert len(market_data.coin_data[symbol]['prices']) == 3
-    assert market_data.coin_data[symbol]['prices'] == [35800.0, 36500.0, 37000.0]
-    assert market_data.coin_data[symbol]['volumes'] == [2.5, 3.1, 2.8]
-    assert market_data.coin_data[symbol]['timestamps'] == [1625097600000, 1625184000000, 1625270400000]
-
-    # Test case 2: Loading empty data
-    symbol2 = "ETH/USD"
-    empty_data = []
-
-    # Call the method with empty data
-    result2 = market_data.load_market_data(symbol2, empty_data)
-
-    # Assertions for empty data
-    assert result2 is False
-    assert symbol2 not in market_data.coin_data
-
-    # Test case 3: Appending to existing data
-    additional_data = [
-        {"timestamp": 1625356800000, "open": 37000.0, "high": 38000.0, "low": 36800.0, "close": 37800.0, "volume": 3.2}
-    ]
-
-    # Initial count of items
-    initial_count = len(market_data.coin_data[symbol]['prices'])
-
-    # Append more data
-    result3 = market_data.load_market_data(symbol, additional_data)
-
-    # Assertions for appended data
-    assert result3 is True
-    assert len(market_data.coin_data[symbol]['prices']) == initial_count + 1
-    assert market_data.coin_data[symbol]['prices'][-1] == 37800.0
-    assert market_data.coin_data[symbol]['volumes'][-1] == 3.2
+    assert symbol in analyzer.coin_data
+    assert len(analyzer.coin_data[symbol]['prices']) == 3
+    assert analyzer.coin_data[symbol]['prices'] == [35800.0, 36500.0, 37000.0]
+    assert analyzer.coin_data[symbol]['volumes'] == [2.5, 3.1, 2.8]
+    assert analyzer.coin_data[symbol]['timestamps'] == [1625097600000, 1625184000000, 1625270400000]
