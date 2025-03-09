@@ -79,7 +79,20 @@ class MultiCoinTradingBot:
         self.is_running = True
         self._stop_event.clear()
 
-        # Connect to WebSocket
+        # STEP 1: Fetch historical data
+        print(f"Fetching historical data for {len(self.symbols)} trading pairs...")
+        historical_data = await self.client.fetch_historical_data(
+            symbols=self.symbols,
+            interval=5,
+            limit=200  # Fetch plenty of historical data
+        )
+
+        # STEP 2: Load data directly into the analyzer
+        print("Loading historical data into analyzer...")
+        for symbol, ohlcv_data in historical_data.items():
+            self.analyzer.load_market_data(symbol, ohlcv_data)
+
+        # STEP 3: Connect to WebSocket for real-time data
         print("Connecting to Kraken WebSocket API...")
         await self.client.connect()
 
@@ -90,7 +103,28 @@ class MultiCoinTradingBot:
         # Set price update callback
         self.client.on_price_update = self._handle_price_update
 
-        # Create tasks
+        # STEP 4: Perform initial market analysis
+        print("Performing initial market analysis...")
+        scores = self.analyzer.calculate_opportunity_scores()
+
+        # STEP 5: Select initial trading pair based on analysis
+        if scores and any(score != 50 for score in scores.values()):
+            top_opportunities = self.analyzer.get_best_opportunities(3)
+
+            print("\nTop Trading Opportunities from initial analysis:")
+            for symbol, score in top_opportunities:
+                print(f"{symbol}: Score {score}/100")
+
+            # Select best coin to start trading immediately
+            if top_opportunities:
+                best_symbol, _ = top_opportunities[0]
+                print(f"Selecting {best_symbol} for immediate trading based on analysis...")
+                await self._switch_active_coin(best_symbol)
+                self._analysis_complete = True
+        else:
+            print("No conclusive analysis available yet. Trading will start once analysis is complete.")
+
+        # STEP 6: Start the monitoring and trading loops
         self._tasks = [
             asyncio.create_task(self._market_analysis_loop()),
             asyncio.create_task(self._trading_execution_loop())
