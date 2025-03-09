@@ -75,3 +75,16 @@ class TradingBot:
         print(f"🚀 Trading Bot initialized in {'SINGLE' if single_coin_mode else 'MULTI'}-coin mode")
         print(f"👀 Monitoring {len(self.symbols)} trading pairs (stablecoins excluded)")
         print(f"💰 Initial balance: {self.initial_balance} USDT")
+
+    def _handle_price_update(self, update: Dict) -> None:
+        """Handle price updates from WebSocket."""
+        symbol = update["symbol"]
+        price = update["data"]["price"]
+        volume = update["data"]["volume"]
+
+        # Update current prices
+        self.current_prices[symbol] = price
+
+        # Update coin data for analysis
+        self._update_coin_data(symbol, price, volume)
+
