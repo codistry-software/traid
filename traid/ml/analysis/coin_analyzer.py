@@ -73,6 +73,33 @@ class CoinOpportunityAnalyzer:
             self.coin_data[symbol]['volumes'] = self.coin_data[symbol]['volumes'][-self.lookback_window:]
             self.coin_data[symbol]['timestamps'] = self.coin_data[symbol]['timestamps'][-self.lookback_window:]
 
+    def load_market_data(self, symbol, ohlcv_data):
+        """Load market data for a symbol directly from OHLCV format.
+
+        Args:
+            symbol: Trading pair symbol
+            ohlcv_data: List of OHLCV candles with timestamp, close, volume, etc.
+        """
+        if not ohlcv_data:
+            print(f"No data to load for {symbol}")
+            return False
+
+        # Initialize data structure if needed
+        if symbol not in self.coin_data:
+            self.coin_data[symbol] = {
+                'prices': [],
+                'volumes': [],
+                'timestamps': []
+            }
+
+        # Extract relevant data
+        for candle in ohlcv_data:
+            self.coin_data[symbol]['timestamps'].append(candle['timestamp'])
+            self.coin_data[symbol]['prices'].append(candle['close'])
+            self.coin_data[symbol]['volumes'].append(candle['volume'])
+
+        return True
+
     def calculate_opportunity_scores(self) -> Dict[str, int]:
         """Calculate opportunity scores for all tracked coins.
 
