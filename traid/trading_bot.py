@@ -6,31 +6,23 @@ import numpy as np
 
 
 class TradingBot:
-    # List of stable coins to exclude from trading
+    """Unified trading bot supporting single-coin or multi-coin trading."""
+
     STABLE_COINS = {'USDT', 'USDC', 'DAI', 'BUSD', 'UST', 'EURT', 'TUSD', 'GUSD', 'PAX', 'HUSD', 'EURS'}
 
     def __init__(
-            self,
-            symbols: List[str],
-            timeframe: str,
-            initial_balance: Decimal,
-            client,
-            single_coin_mode: bool = False
+        self,
+        symbols: List[str],
+        timeframe: str,
+        initial_balance: Decimal,
+        client,
+        single_coin_mode: bool = False
     ):
-        """Initialize trading bot."""
-        # Filter out stablecoins from symbols list
-        self.symbols = []
-        for s in symbols:
-            # Expect a format like "BTC/USDT"
-            try:
-                base, quote = s.split('/')
-            except ValueError:
-                # If the symbol doesn't have '/', skip or handle differently
-                continue
-
-            # We only skip if the BASE is a stable coin
-            if base not in self.STABLE_COINS:
-                self.symbols.append(s)
+        # Filter out stablecoins or invalid symbols
+        self.symbols = [
+            s for s in symbols
+            if '/' in s and s.split('/')[0] not in self.STABLE_COINS
+        ]
 
         self.timeframe = timeframe
         self.initial_balance = initial_balance
@@ -38,29 +30,26 @@ class TradingBot:
         self.client = client
         self.single_coin_mode = single_coin_mode
 
-        # Trading parameters - more aggressive settings
-        self.max_trade_count = 10  # Increased from 5 to be more aggressive
-        self.trade_cooldown = 60  # Reduced from 300 to be more aggressive (1 minute)
-        self.last_trade_time = 0  # Timestamp of last trade
-
-        # Set on_price_update callback
-        self.client.on_price_update = self._handle_price_update
+        self.last_trade_time = 0
 
         # Trading state
-        self.active_symbol = self.symbols[0] if single_coin_mode else None
+        self.active_symbol = self.symbols[0] if self.single_coin_mode and self.symbols else None
         self.positions: Dict[str, Decimal] = {}
         self.execution_history: Dict[str, List[Dict]] = {symbol: [] for symbol in self.symbols}
         self.current_prices: Dict[str, Decimal] = {}
+
+        # Each symbol’s allocated balance, if single coin mode,
+        # we allocate the entire initial balance to the first symbol.
         self.allocated_balances: Dict[str, Decimal] = {
             symbol: (initial_balance if symbol == self.active_symbol and single_coin_mode else Decimal('0'))
             for symbol in self.symbols
         }
 
-        # Technical analysis data
+        # Data for technical analysis
         self.coin_data: Dict[str, Dict] = {}
         self.opportunity_scores: Dict[str, int] = {}
 
-        # Control flags
+        # Flags and tasks
         self.is_running = False
         self._stop_event = asyncio.Event()
         self._tasks = []
@@ -71,68 +60,54 @@ class TradingBot:
         self.total_profit_loss = Decimal('0')
         self.start_time = None
 
-        # Print initialization message
+        # Set price update callback
+        self.client.on_price_update = self._handle_price_update
+
         print(f"🚀 Trading Bot initialized in {'SINGLE' if single_coin_mode else 'MULTI'}-coin mode")
         print(f"👀 Monitoring {len(self.symbols)} trading pairs (stablecoins excluded)")
         print(f"💰 Initial balance: {self.initial_balance} USDT")
 
     def _handle_price_update(self, update: Dict) -> None:
-        """Handle price updates from WebSocket."""
+        """Handle live price updates from the client."""
         symbol = update["symbol"]
         price = update["data"]["price"]
         volume = update["data"]["volume"]
 
-        # Update current prices
         self.current_prices[symbol] = price
-
-        # Update coin data for analysis
         self._update_coin_data(symbol, price, volume)
 
     def _update_coin_data(self, symbol: str, price: Decimal, volume: Decimal) -> None:
-        """Update historical data for a coin."""
+        """Maintain a rolling history of prices/volumes/timestamps for analysis."""
         if symbol not in self.coin_data:
-            self.coin_data[symbol] = {
-                'prices': [],
-                'volumes': [],
-                'timestamps': []
-            }
+            self.coin_data[symbol] = {'prices': [], 'volumes': [], 'timestamps': []}
 
-        timestamp = int(time.time())
-
-        # Add new data point
         self.coin_data[symbol]['prices'].append(float(price))
         self.coin_data[symbol]['volumes'].append(float(volume))
-        self.coin_data[symbol]['timestamps'].append(timestamp)
+        self.coin_data[symbol]['timestamps'].append(int(time.time()))
 
-        # Limit the history length
-        max_history = 50
-        if len(self.coin_data[symbol]['prices']) > max_history:
-            self.coin_data[symbol]['prices'] = self.coin_data[symbol]['prices'][-max_history:]
-            self.coin_data[symbol]['volumes'] = self.coin_data[symbol]['volumes'][-max_history:]
-            self.coin_data[symbol]['timestamps'] = self.coin_data[symbol]['timestamps'][-max_history:]
+        # Keep only the last 50 data points
+        max_len = 50
+        for key in ['prices', 'volumes', 'timestamps']:
+            if len(self.coin_data[symbol][key]) > max_len:
+                self.coin_data[symbol][key] = self.coin_data[symbol][key][-max_len:]
 
     async def start(self) -> None:
-        """Start the trading bot."""
+        """Begin trading: connect to client, fetch history, start loops."""
         if self.is_running:
             return
-
         self.is_running = True
         self._stop_event.clear()
         self.start_time = int(time.time())
 
-        # Connect to WebSocket and subscribe to symbols
         print("📡 Connecting to Kraken WebSocket API...")
         await self.client.connect()
 
         print(f"🔔 Subscribing to {len(self.symbols)} trading pairs...")
         await self.client.subscribe_prices(self.symbols)
 
-        # Fetch historical data
         print("📊 Fetching historical data...")
         historical_data = await self.client.fetch_historical_data(
-            symbols=self.symbols,
-            interval=5,
-            limit=50
+            symbols=self.symbols, interval=5, limit=50
         )
 
         # Load historical data
@@ -143,258 +118,194 @@ class TradingBot:
                 'timestamps': [candle['timestamp'] for candle in ohlcv_data]
             }
 
-        # Calculate initial opportunity scores
+        # Calculate initial scores and choose an active symbol (multi-coin mode)
         self._calculate_opportunity_scores()
-
-        # Print top opportunities
         top_opportunities = self._get_top_opportunities(5)
         print("\n🔥 Initial Top Trading Opportunities:")
-        for symbol, score in top_opportunities:
-            print(f"  {symbol}: Score {score}/100")
+        for sym, score in top_opportunities:
+            print(f"  {sym}: Score {score}/100")
 
-        # Set initial active symbol
         if not self.single_coin_mode:
-            top_coin = self._get_best_opportunity()
-            if top_coin:
-                print(f"\n🎯 Selected {top_coin} as initial trading target")
-                await self._switch_active_coin(top_coin)
+            best_coin = self._get_best_opportunity()
+            if best_coin:
+                print(f"\n🎯 Selected {best_coin} as initial trading target")
+                await self._switch_active_coin(best_coin)
         else:
             print(f"\n🎯 Trading single coin: {self.active_symbol}")
 
-        # Start the trading loops
+        # Create and run loops
         self._tasks = [
             asyncio.create_task(self._analysis_loop()),
             asyncio.create_task(self._trading_loop())
         ]
 
         print("\n✅ Trading bot is now active")
-        print(f"💪 Strategy: {'AGGRESSIVE' if not self.single_coin_mode else 'SINGLE-COIN FOCUS'}")
+        print(f"💪 Strategy: {'SINGLE-COIN FOCUS' if self.single_coin_mode else 'AGGRESSIVE MULTI-COIN'}")
         self._print_portfolio_status()
 
     async def stop(self) -> None:
-        """Stop the trading bot."""
+        """Cleanly stop the bot and close connections."""
         if not self.is_running:
             return
-
         print("🛑 Stopping trading bot...")
         self._stop_event.set()
 
-        # Wait for tasks to complete
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
 
-        # Close WebSocket connection
         await self.client.close()
-
         self.is_running = False
+
         print("\n⏹️ Trading bot stopped")
         self._print_summary()
 
     async def _analysis_loop(self) -> None:
-        """Analyze market data and update opportunity scores every 5 minutes."""
+        """Periodic analysis for multi-coin mode (every 5 minutes)."""
         while not self._stop_event.is_set():
             try:
-                # Skip analysis in single-coin mode
                 if self.single_coin_mode:
-                    await asyncio.sleep(300)  # 5 minutes
+                    await asyncio.sleep(300)
                     continue
 
-                # Calculate opportunity scores
                 self._calculate_opportunity_scores()
-
-                # Get best opportunities
                 top_opportunities = self._get_top_opportunities(3)
-
                 if top_opportunities:
                     print("\n📊 MARKET ANALYSIS UPDATE 📊")
                     print("Top Trading Opportunities:")
-                    for symbol, score in top_opportunities:
-                        print(f"  {symbol}: Score {score}/100")
+                    for sym, score in top_opportunities:
+                        print(f"  {sym}: Score {score}/100")
 
-                    # Check if we should switch coins
                     if self.active_symbol:
                         better_coin = self._should_change_coin()
                         if better_coin and better_coin != self.active_symbol:
                             print(f"\n🔄 Switching target from {self.active_symbol} to {better_coin}")
                             await self._switch_active_coin(better_coin)
                     else:
-                        # No active coin yet, select the best one
                         best_coin = self._get_best_opportunity()
                         if best_coin:
                             print(f"\n🎯 Selecting {best_coin} for trading")
                             await self._switch_active_coin(best_coin)
 
-                # Print current portfolio status
                 self._print_portfolio_status()
-
-                # Wait 5 minutes before next analysis
-                await asyncio.sleep(300)  # 5 minutes between market checks
+                await asyncio.sleep(300)  # 5 minutes
 
             except Exception as e:
                 print(f"❌ Error in market analysis: {e}")
-                await asyncio.sleep(60)  # Shorter recovery time for errors
+                await asyncio.sleep(60)
 
     async def _trading_loop(self) -> None:
-        """Execute trading actions every second."""
+        """Check signals and trade continuously (every second)."""
         while not self._stop_event.is_set():
             try:
-                # Only trade if we have an active symbol with allocated balance
-                if self.active_symbol and self.allocated_balances.get(self.active_symbol, Decimal('0')) > Decimal('0'):
-
-                    # Get latest price
+                if self.active_symbol and self.allocated_balances.get(self.active_symbol, Decimal('0')) > 0:
                     price = self.client.get_latest_price(self.active_symbol)
-
                     if not price or price <= 0:
                         await asyncio.sleep(1)
                         continue
 
-                    # Generate signal
                     signal = self._generate_trading_signal(self.active_symbol)
-
-                    # Execute trade based on signal
-                    if signal == 1:  # Buy signal
-                        success = self._execute_buy(self.active_symbol, price)
-                        if success:
+                    if signal == 1:  # Buy
+                        if self._execute_buy(self.active_symbol, price):
+                            self._print_portfolio_status()
+                    elif signal == -1:  # Sell
+                        if self._execute_sell(self.active_symbol, price):
                             self._print_portfolio_status()
 
-                    elif signal == -1:  # Sell signal
-                        success = self._execute_sell(self.active_symbol, price)
-                        if success:
-                            self._print_portfolio_status()
-
-                # Wait before next check (every second)
                 await asyncio.sleep(1)
 
             except Exception as e:
                 print(f"❌ Error in trading execution: {e}")
-                await asyncio.sleep(5)  # Shorter recovery time for errors
+                await asyncio.sleep(5)
 
     def _calculate_opportunity_scores(self) -> Dict[str, int]:
-        """Calculate opportunity scores for all coins."""
+        """Calculate and store opportunity scores for all symbols."""
         for symbol, data in self.coin_data.items():
-            # Skip if not enough data
             if len(data['prices']) < 10:
-                self.opportunity_scores[symbol] = 50  # Neutral score
+                self.opportunity_scores[symbol] = 50
                 continue
 
+            prices = np.array(data['prices'])
+            volumes = np.array(data['volumes'])
+
             try:
-                # Convert to numpy arrays
-                prices = np.array(data['prices'])
-                volumes = np.array(data['volumes'])
-
-                # Calculate score
                 score = self._calculate_coin_score(symbol, prices, volumes)
-                self.opportunity_scores[symbol] = score
-
             except Exception as e:
                 print(f"Error calculating score for {symbol}: {e}")
-                self.opportunity_scores[symbol] = 50
+                score = 50
+
+            self.opportunity_scores[symbol] = score
 
         return self.opportunity_scores
 
     def _calculate_coin_score(self, symbol: str, prices: np.ndarray, volumes: np.ndarray) -> int:
-        """Calculate opportunity score for a single coin (more aggressive)."""
-        # Base score starts at 50 (neutral)
-        score = 50
+        """Compute a simple integer score (0-100) based on recent price and volume action."""
+        score = 50  # start neutral
 
-        try:
-            # Check if we have enough data
-            if len(prices) < 10:
-                return 50
+        # Recent price change
+        if len(prices) >= 2:
+            recent_change = (prices[-1] / prices[-2] - 1) * 100
+            if recent_change > 1:
+                score += recent_change * 2
+            elif recent_change < -1:
+                score -= abs(recent_change)
 
-            # Calculate price changes
-            if len(prices) >= 2:
-                recent_change = (prices[-1] / prices[-2] - 1) * 100
-                # Reward recent price increases more aggressively
-                if recent_change > 1:
-                    score += recent_change * 2  # Double weight for upward movement
-                elif recent_change < -1:
-                    score -= abs(recent_change)
+        # RSI
+        rsi = self._calculate_rsi(prices)
+        if rsi < 30:
+            score += (30 - rsi) * 1.5
+        elif rsi > 70:
+            score -= (rsi - 70) * 1.5
 
-            # Calculate RSI
-            rsi = self._calculate_rsi(prices)
+        # Short and long MAs
+        if len(prices) >= 6:
+            short_ma = np.mean(prices[-3:])
+            long_ma = np.mean(prices[-6:])
+            if short_ma > long_ma:
+                trend_strength = (short_ma / long_ma - 1) * 100
+                score += 10 + trend_strength
+            else:
+                trend_weakness = (1 - short_ma / long_ma) * 100
+                score -= 10 + trend_weakness
 
-            # RSI component - more aggressive weighting
-            if rsi < 30:  # Oversold - buying opportunity
-                score += (30 - rsi) * 1.5
-            elif rsi > 70:  # Overbought - selling opportunity
-                score -= (rsi - 70) * 1.5
+        # Volume spike
+        if len(volumes) >= 3:
+            avg_volume = np.mean(volumes[-4:-1])
+            current_volume = volumes[-1]
+            if avg_volume > 0 and current_volume > avg_volume * 1.5:
+                volume_increase = (current_volume / avg_volume - 1) * 10
+                score += 10 + volume_increase
 
-            # Price trend component - shorter timeframes for faster response
-            if len(prices) >= 6:
-                short_ma = np.mean(prices[-3:])  # 3-period MA (was 5)
-                long_ma = np.mean(prices[-6:])  # 6-period MA (was 10)
-
-                # More aggressive scoring for uptrends
-                if short_ma > long_ma:  # Uptrend
-                    trend_strength = (short_ma / long_ma - 1) * 100
-                    score += 10 + trend_strength
-                else:  # Downtrend
-                    trend_weakness = (1 - short_ma / long_ma) * 100
-                    score -= 10 + trend_weakness
-
-            # Volume component - more aggressive
-            if len(volumes) >= 3:
-                avg_volume = np.mean(volumes[-4:-1])  # Last 3 periods excluding current
-                current_volume = volumes[-1]
-
-                # Higher volume is more important
-                if current_volume > avg_volume * 1.5:
-                    volume_increase = (current_volume / avg_volume - 1) * 10
-                    score += 10 + volume_increase
-
-        except Exception as e:
-            print(f"Error in score calculation: {e}")
-
-        # Ensure score is within 0-100 range
         return max(0, min(100, int(score)))
 
     def _calculate_rsi(self, prices: np.ndarray, period: int = 14) -> float:
-        """Calculate Relative Strength Index."""
+        """Calculate RSI over the given period."""
         if len(prices) < period + 1:
             return 50
 
-        # Calculate price changes
         deltas = np.diff(prices)
+        gains = np.where(deltas > 0, deltas, 0)
+        losses = np.where(deltas < 0, -deltas, 0)
 
-        # Split gains and losses
-        gains = deltas.copy()
-        losses = deltas.copy()
-        gains[gains < 0] = 0
-        losses[losses > 0] = 0
-        losses = abs(losses)
-
-        # Calculate average gains and losses
         avg_gain = np.mean(gains[:period])
         avg_loss = np.mean(losses[:period])
-
-        # Calculate RS and RSI
         if avg_loss == 0:
             return 100
 
         rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-
-        return rsi
+        return 100 - (100 / (1 + rs))
 
     def _get_top_opportunities(self, top_n: int = 3) -> List:
-        """Get top N coins with highest opportunity scores."""
-        sorted_opportunities = sorted(
-            self.opportunity_scores.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
-
-        return sorted_opportunities[:top_n]
+        """Return a sorted list of the highest scoring symbols."""
+        return sorted(self.opportunity_scores.items(), key=lambda x: x[1], reverse=True)[:top_n]
 
     def _get_best_opportunity(self) -> Optional[str]:
-        """Get the best opportunity coin."""
-        top_opportunities = self._get_top_opportunities(1)
-        return top_opportunities[0][0] if top_opportunities else None
+        """Return the single best coin according to current scores."""
+        top = self._get_top_opportunities(1)
+        return top[0][0] if top else None
 
     def _should_change_coin(self) -> Optional[str]:
-        """Determine if bot should switch to a different coin (more aggressive)."""
-        if not self.opportunity_scores or self.active_symbol not in self.opportunity_scores:
+        """Check whether a different coin's score is sufficiently higher than the current."""
+        if not self.active_symbol or self.active_symbol not in self.opportunity_scores:
             return self._get_best_opportunity()
 
         best_coin = self._get_best_opportunity()
@@ -403,122 +314,94 @@ class TradingBot:
 
         current_score = self.opportunity_scores[self.active_symbol]
         best_score = self.opportunity_scores[best_coin]
-
-        # More aggressive coin switching: 10+ points difference instead of 15
         if best_coin != self.active_symbol and best_score > current_score + 10:
             return best_coin
-
         return None
 
     async def _switch_active_coin(self, new_symbol: str) -> None:
-        """Switch trading to a different coin."""
+        """Switch all trading operations to a new symbol, liquidating old positions."""
         if new_symbol not in self.symbols:
-            print(f"Cannot switch to {new_symbol}: not in monitored symbols")
+            print(f"Cannot switch to {new_symbol}: not monitored")
             return
 
-        # If we have an active symbol, liquidate positions
+        # Sell out of old symbol
         if self.active_symbol:
-            # Sell all positions
             if self.active_symbol in self.positions and self.positions[self.active_symbol] > 0:
                 price = self.client.get_latest_price(self.active_symbol)
                 if price:
                     self._execute_sell(self.active_symbol, price, self.positions[self.active_symbol])
                 else:
-                    print(f"⚠️ Warning: Could not get price for {self.active_symbol}, positions not liquidated")
+                    print(f"⚠️ No price for {self.active_symbol}; positions not liquidated")
 
-            # Update available balance
             self.available_balance += self.allocated_balances[self.active_symbol]
             self.allocated_balances[self.active_symbol] = Decimal('0')
 
-        # Set new active symbol
         old_symbol = self.active_symbol
         self.active_symbol = new_symbol
 
-        # Allocate balance to new symbol (80% of available - more aggressive than before)
-        allocation = self.available_balance * Decimal('0.8')  # Was 70% before
+        # Allocate 80% of available balance to new symbol
+        allocation = self.available_balance * Decimal('0.8')
         self.allocated_balances[new_symbol] = allocation
         self.available_balance -= allocation
 
-        print(f"🔄 SWITCHED from {old_symbol if old_symbol else 'none'} to {new_symbol}")
+        print(f"🔄 SWITCHED from {old_symbol or 'none'} to {new_symbol}")
         print(f"💰 Allocated {allocation:.2f} USDT to {new_symbol}")
 
     def _generate_trading_signal(self, symbol: str) -> int:
-        """Generate trading signal for a symbol (more aggressive).
-
-        Returns:
-            int: 1 for buy, -1 for sell, 0 for hold
-        """
-        if symbol not in self.coin_data or len(self.coin_data[symbol]['prices']) < 14:
+        """Generate a buy (1), sell (-1), or hold (0) signal."""
+        data = self.coin_data.get(symbol)
+        if not data or len(data['prices']) < 14:
             return 0
 
-        prices = np.array(self.coin_data[symbol]['prices'])
-
-        # Calculate RSI
+        prices = np.array(data['prices'])
         rsi = self._calculate_rsi(prices)
 
-        # Calculate moving averages
         if len(prices) >= 10:
-            short_ma = np.mean(prices[-3:])  # Shorter window (was 5)
-            long_ma = np.mean(prices[-8:])  # Shorter window (was 10)
+            short_ma = np.mean(prices[-3:])
+            long_ma = np.mean(prices[-8:])
 
-            # Buy signal: More aggressive parameters
-            # Buy when RSI < 35 (was 30) or when short MA > long MA with RSI < 65 (was 60)
+            # Buy conditions
             if rsi < 35 or (short_ma > long_ma and rsi < 65):
-                # Check if we already have a position
-                if symbol not in self.positions or self.positions.get(symbol, Decimal('0')) == Decimal('0'):
+                if symbol not in self.positions or self.positions[symbol] == 0:
                     return 1
 
-            # Sell signal: More aggressive parameters
-            # Sell when RSI > 65 (was 70) or when short MA < long MA with RSI > 35 (was 40)
-            elif rsi > 65 or (short_ma < long_ma and rsi > 35):
-                # Check if we have a position to sell
-                if symbol in self.positions and self.positions.get(symbol, Decimal('0')) > 0:
+            # Sell conditions
+            if rsi > 65 or (short_ma < long_ma and rsi > 35):
+                if symbol in self.positions and self.positions[symbol] > 0:
                     return -1
 
         return 0
 
     def _execute_buy(self, symbol: str, price: Decimal, volume: Optional[Decimal] = None) -> bool:
-        """Execute a buy order (more aggressive)."""
+        """Perform a buy order using allocated balance."""
         if price <= 0:
             print(f"Invalid price for {symbol}: {price}")
             return False
 
-        available_balance = self.allocated_balances.get(symbol, Decimal('0'))
-
-        if available_balance <= 0:
+        bal = self.allocated_balances.get(symbol, Decimal('0'))
+        if bal <= 0:
             print(f"No balance allocated for {symbol}")
             return False
 
-        # Calculate volume if not provided - use 95% of available balance (was 90%)
+        # Use up to 95% of allocated balance if volume not specified
         if volume is None:
-            position_value = available_balance * Decimal('0.95')  # More aggressive allocation
+            position_value = bal * Decimal('0.95')
             volume = position_value / price
 
-        # Minimum volume check
         if volume < Decimal('0.0001'):
             print(f"Volume too small for {symbol}: {volume}")
             return False
 
         cost = price * volume
-
-        # Check if we have enough balance
-        if cost > available_balance:
-            # Use all available balance instead of failing
-            volume = available_balance / price
+        if cost > bal:
+            volume = bal / price
             cost = price * volume
 
-        # Update balance
         self.allocated_balances[symbol] -= cost
+        self.positions[symbol] = self.positions.get(symbol, Decimal('0')) + volume
 
-        # Update position
-        if symbol not in self.positions:
-            self.positions[symbol] = Decimal('0')
-        self.positions[symbol] += volume
-
-        # Record trade
-        timestamp = int(time.time())
-        trade_details = {
-            "timestamp": timestamp,
+        details = {
+            "timestamp": int(time.time()),
             "action": "buy",
             "symbol": symbol,
             "price": float(price),
@@ -526,15 +409,14 @@ class TradingBot:
             "cost": float(cost),
             "balance_after": float(self.allocated_balances[symbol])
         }
-
-        self.execution_history[symbol].append(trade_details)
+        self.execution_history[symbol].append(details)
         self.total_trades += 1
 
         print(f"🔵 BOUGHT {volume:.6f} {symbol} at {price} USDT (Total: {cost:.2f} USDT)")
         return True
 
     def _execute_sell(self, symbol: str, price: Decimal, volume: Optional[Decimal] = None) -> bool:
-        """Execute a sell order."""
+        """Perform a sell order of either specified or all current position."""
         if price <= 0:
             print(f"Invalid price for {symbol}: {price}")
             return False
@@ -543,24 +425,17 @@ class TradingBot:
             print(f"No position to sell for {symbol}")
             return False
 
-        # Use all available volume if not specified
         if volume is None or volume > self.positions[symbol]:
             volume = self.positions[symbol]
 
         revenue = price * volume
-
-        # Update balance
         self.allocated_balances[symbol] += revenue
-
-        # Update position
         self.positions[symbol] -= volume
-        if self.positions[symbol] == Decimal('0'):
+        if self.positions[symbol] == 0:
             del self.positions[symbol]
 
-        # Record trade
-        timestamp = int(time.time())
-        trade_details = {
-            "timestamp": timestamp,
+        details = {
+            "timestamp": int(time.time()),
             "action": "sell",
             "symbol": symbol,
             "price": float(price),
@@ -568,94 +443,90 @@ class TradingBot:
             "revenue": float(revenue),
             "balance_after": float(self.allocated_balances[symbol])
         }
-
-        self.execution_history[symbol].append(trade_details)
+        self.execution_history[symbol].append(details)
         self.total_trades += 1
 
-        # Check if profitable
-        buy_price = self._get_average_buy_price(symbol)
-        if buy_price:
-            profit = volume * (price - buy_price)
-            profit_percent = (price / buy_price - 1) * 100
-
-            if price > buy_price:
+        avg_buy_price = self._get_average_buy_price(symbol)
+        if avg_buy_price:
+            profit = volume * (price - avg_buy_price)
+            profit_percent = (price / avg_buy_price - 1) * 100
+            if price > avg_buy_price:
                 self.profitable_trades += 1
                 self.total_profit_loss += profit
                 print(
-                    f"🟢 SOLD {volume:.6f} {symbol} at {price} USDT - PROFIT: {profit:.2f} USDT (+{profit_percent:.2f}%)")
+                    f"🟢 SOLD {volume:.6f} {symbol} at {price} USDT "
+                    f"- PROFIT: {profit:.2f} USDT (+{profit_percent:.2f}%)"
+                )
             else:
                 self.total_profit_loss += profit
-                print(f"🔴 SOLD {volume:.6f} {symbol} at {price} USDT - LOSS: {profit:.2f} USDT ({profit_percent:.2f}%)")
+                print(
+                    f"🔴 SOLD {volume:.6f} {symbol} at {price} USDT "
+                    f"- LOSS: {profit:.2f} USDT ({profit_percent:.2f}%)"
+                )
         else:
             print(f"🟡 SOLD {volume:.6f} {symbol} at {price} USDT (Total: {revenue:.2f} USDT)")
-
         return True
 
     def _get_average_buy_price(self, symbol: str) -> Optional[Decimal]:
-        """Calculate average buy price for a symbol."""
+        """Compute the average buy price for a symbol from recorded trades."""
         buy_trades = [t for t in self.execution_history.get(symbol, []) if t['action'] == 'buy']
-
         if not buy_trades:
             return None
 
         total_cost = sum(t['cost'] for t in buy_trades)
         total_volume = sum(t['volume'] for t in buy_trades)
-
         if total_volume == 0:
             return None
 
         return Decimal(str(total_cost)) / Decimal(str(total_volume))
 
-    def _print_portfolio_status(self) -> None:
-        """Print current portfolio status."""
-        # Calculate total portfolio value
-        portfolio_value = self.available_balance
-        for symbol, balance in self.allocated_balances.items():
-            portfolio_value += balance
-
-        for symbol, volume in self.positions.items():
-            price = self.client.get_latest_price(symbol)
+    def _calculate_total_portfolio_value(self) -> Decimal:
+        """Sum up all cash + allocated balances + open positions."""
+        total_value = self.available_balance
+        for sym, bal in self.allocated_balances.items():
+            total_value += bal
+        for sym, vol in self.positions.items():
+            price = self.client.get_latest_price(sym)
             if price:
-                portfolio_value += volume * price
+                total_value += vol * price
+        return total_value
 
-        # Calculate profit/loss
+    def _elapsed_time_str(self) -> str:
+        """Return elapsed time since start in Xh Ym Zs format or 'N/A'."""
+        if not self.start_time:
+            return "N/A"
+        elapsed = int(time.time()) - self.start_time
+        h = elapsed // 3600
+        m = (elapsed % 3600) // 60
+        s = elapsed % 60
+        return f"{h}h {m}m {s}s"
+
+    def _print_portfolio_status(self) -> None:
+        """Print current time, active symbol, open positions, and P/L."""
+        portfolio_value = self._calculate_total_portfolio_value()
         profit = portfolio_value - self.initial_balance
         profit_percent = (profit / self.initial_balance * 100) if self.initial_balance > 0 else Decimal('0')
 
-        # Calculate time elapsed
-        if self.start_time:
-            elapsed_seconds = int(time.time()) - self.start_time
-            elapsed_hours = elapsed_seconds // 3600
-            elapsed_minutes = (elapsed_seconds % 3600) // 60
-            elapsed_seconds = elapsed_seconds % 60
-            time_str = f"{elapsed_hours}h {elapsed_minutes}m {elapsed_seconds}s"
-        else:
-            time_str = "N/A"
-
         print("\n📈 PORTFOLIO STATUS 📈")
-        print(f"⏱️ Session Duration: {time_str}")
+        print(f"⏱️ Session Duration: {self._elapsed_time_str()}")
         print(f"🎯 Active Symbol: {self.active_symbol or 'None'}")
         print(f"💵 Available Balance: {self.available_balance:.2f} USDT")
 
-        # Show active positions
         if self.positions:
             print("\n📊 Active Positions:")
-            for symbol, volume in self.positions.items():
-                price = self.client.get_latest_price(symbol)
-                value = volume * price if price else Decimal('0')
-                avg_buy = self._get_average_buy_price(symbol)
-
+            for sym, vol in self.positions.items():
+                price = self.client.get_latest_price(sym) or Decimal('0')
+                value = vol * price
+                avg_buy = self._get_average_buy_price(sym)
                 if avg_buy:
-                    position_profit = (price / avg_buy - 1) * 100 if price else Decimal('0')
-                    profit_emoji = "🟢" if position_profit > 0 else "🔴"
-                    print(f"  {profit_emoji} {symbol}: {volume:.6f} @ avg {avg_buy:.4f} "
-                          f"(Current: {price:.4f}, P/L: {position_profit:.2f}%, Value: {value:.2f} USDT)")
+                    pos_pl_percent = ((price / avg_buy) - 1) * 100 if avg_buy else Decimal('0')
+                    indicator = "🟢" if pos_pl_percent > 0 else "🔴"
+                    print(f"  {indicator} {sym}: {vol:.6f} @ avg {avg_buy:.4f} "
+                          f"(Current: {price:.4f}, P/L: {pos_pl_percent:.2f}%, Value: {value:.2f} USDT)")
                 else:
-                    print(f"  {symbol}: {volume:.6f} (Value: {value:.2f} USDT)")
+                    print(f"  {sym}: {vol:.6f} (Value: {value:.2f} USDT)")
 
         print(f"\n💰 Total Portfolio Value: {portfolio_value:.2f} USDT")
-
-        # Show profit/loss with color indicators
         if profit > 0:
             print(f"📊 Profit/Loss: 🟢 +{profit:.2f} USDT (+{profit_percent:.2f}%)")
         elif profit < 0:
@@ -663,7 +534,6 @@ class TradingBot:
         else:
             print(f"📊 Profit/Loss: {profit:.2f} USDT ({profit_percent:.2f}%)")
 
-        # Show performance metrics
         if self.total_trades > 0:
             win_rate = (self.profitable_trades / self.total_trades) * 100
             print(f"🔄 Trades: {self.total_trades} (Win Rate: {win_rate:.2f}%)")
@@ -673,43 +543,20 @@ class TradingBot:
         print("-" * 40)
 
     def _print_summary(self) -> None:
-        """Print trading session summary."""
-        # Calculate session duration
-        if self.start_time:
-            elapsed_seconds = int(time.time()) - self.start_time
-            elapsed_hours = elapsed_seconds // 3600
-            elapsed_minutes = (elapsed_seconds % 3600) // 60
-            elapsed_seconds = elapsed_seconds % 60
-            time_str = f"{elapsed_hours}h {elapsed_minutes}m {elapsed_seconds}s"
-        else:
-            time_str = "N/A"
-
-        # Calculate final portfolio value
-        final_value = self.available_balance
-        for symbol, balance in self.allocated_balances.items():
-            final_value += balance
-
-        for symbol, volume in self.positions.items():
-            price = self.client.get_latest_price(symbol)
-            if price:
-                final_value += volume * price
-
-        # Calculate profit
-        profit = final_value - self.initial_balance
+        """Print a final summary of the session."""
+        portfolio_value = self._calculate_total_portfolio_value()
+        profit = portfolio_value - self.initial_balance
         profit_percent = (profit / self.initial_balance * 100) if self.initial_balance > 0 else Decimal('0')
 
         print("\n" + "=" * 50)
         print("               TRADING SESSION SUMMARY               ")
         print("=" * 50)
-
-        print(f"\n⏱️ Session Duration: {time_str}")
+        print(f"\n⏱️ Session Duration: {self._elapsed_time_str()}")
         print(f"🤖 Trading Mode: {'Single-coin' if self.single_coin_mode else 'Multi-coin'}")
         print(f"👀 Coins Monitored: {len(self.symbols)}")
-
         print(f"\n💰 Initial Portfolio: {self.initial_balance:.2f} USDT")
-        print(f"💰 Final Portfolio: {final_value:.2f} USDT")
+        print(f"💰 Final Portfolio: {portfolio_value:.2f} USDT")
 
-        # Show profit/loss with color indicators
         if profit > 0:
             print(f"📊 Total Profit/Loss: 🟢 +{profit:.2f} USDT (+{profit_percent:.2f}%)")
         elif profit < 0:
@@ -717,19 +564,16 @@ class TradingBot:
         else:
             print(f"📊 Total Profit/Loss: {profit:.2f} USDT ({profit_percent:.2f}%)")
 
-        # Trading statistics
         print(f"\n🔄 Total Trades: {self.total_trades}")
-
         if self.total_trades > 0:
             win_rate = (self.profitable_trades / self.total_trades) * 100
             print(f"✅ Profitable Trades: {self.profitable_trades} ({win_rate:.2f}%)")
 
-        # Print final positions
         if self.positions:
             print("\n📊 Remaining Positions:")
-            for symbol, volume in self.positions.items():
-                price = self.client.get_latest_price(symbol)
-                value = volume * price if price else Decimal('0')
-                print(f"  {symbol}: {volume:.6f} (Value: {value:.2f} USDT)")
+            for sym, vol in self.positions.items():
+                price = self.client.get_latest_price(sym) or Decimal('0')
+                val = vol * price
+                print(f"  {sym}: {vol:.6f} (Value: {val:.2f} USDT)")
 
         print("\n" + "=" * 50)
