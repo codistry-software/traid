@@ -33,10 +33,8 @@ async def get_all_kraken_pairs():
                 base = pair_data.get('base', '')
                 quote = pair_data.get('quote', '')
 
-                # Skip pairs with unusual names or special characters
                 if base and quote and len(base) < 10 and len(quote) < 10:
-                    # Format to standard notation
-                    if quote == 'USDT':
+                    if quote == 'USDT' and base not in STABLE_COINS:
                         standard_pair = f"{base}/{quote}"
                         usdt_pairs.append(standard_pair)
 
