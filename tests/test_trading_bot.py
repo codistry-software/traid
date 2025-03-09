@@ -330,3 +330,13 @@ class TestTradingBot:
         avg_price = trading_bot._get_average_buy_price('BTC/USDT')
         assert avg_price == Decimal('95')  # (45 + 50) / (0.5 + 0.5) = 95
 
+    def test_calculate_total_portfolio_value(self, trading_bot):
+        """Test portfolio value calculation."""
+        trading_bot.available_balance = Decimal('300')
+        trading_bot.allocated_balances['BTC/USDT'] = Decimal('200')
+        trading_bot.allocated_balances['ETH/USDT'] = Decimal('100')
+        trading_bot.positions['BTC/USDT'] = Decimal('0.5')  # Worth 50 at price 100
+
+        total_value = trading_bot._calculate_total_portfolio_value()
+        assert total_value == Decimal('650')  # 300 + 200 + 100 + (0.5 * 100)
+
