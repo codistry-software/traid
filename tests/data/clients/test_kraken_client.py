@@ -311,10 +311,10 @@ async def test_initialize_historical_data_success(client, monkeypatch):
 
     # Patch the client's method class-wide (rather than instance-specific)
     import types
-    client.initialize_historical_data = types.MethodType(mock_initialize_historical_data, client)
+    client.fetch_historical_data = types.MethodType(mock_initialize_historical_data, client)
 
     # Call the method
-    result = await client.initialize_historical_data(["BTC/USDT"], interval=5)
+    result = await client.fetch_historical_data(["BTC/USDT"], interval=5)
 
     # Assertions
     assert result is True
@@ -395,7 +395,7 @@ async def test_initialize_historical_data_api_error(client, monkeypatch):
     monkeypatch.setattr('aiohttp.ClientSession', lambda: mock_client_session)
 
     # Call the method
-    result = await client.initialize_historical_data(["BTC/USDT"], interval=5)
+    result = await client.fetch_historical_data(["BTC/USDT"], interval=5)
 
     # Assertions
     assert result is False
@@ -414,7 +414,7 @@ async def test_initialize_historical_data_http_error(client, monkeypatch):
     monkeypatch.setattr('aiohttp.ClientSession.get', mock_get)
 
     # Call the method
-    result = await client.initialize_historical_data(["BTC/USDT"], interval=5)
+    result = await client.fetch_historical_data(["BTC/USDT"], interval=5)
 
     # Assertions
     assert result is False
@@ -431,7 +431,7 @@ async def test_initialize_historical_data_exception(client, monkeypatch):
     monkeypatch.setattr('aiohttp.ClientSession.get', mock_get)
 
     # Call the method
-    result = await client.initialize_historical_data(["BTC/USDT"], interval=5)
+    result = await client.fetch_historical_data(["BTC/USDT"], interval=5)
 
     # Assertions
     assert result is False
