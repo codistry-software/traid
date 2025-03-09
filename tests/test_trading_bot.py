@@ -266,3 +266,15 @@ class TestTradingBot:
             signal = trading_bot._generate_trading_signal('BTC/USDT')
             assert signal == -1  # Should generate a sell signal
 
+    def test_execute_buy(self, trading_bot):
+        """Test buy execution."""
+        trading_bot.allocated_balances['BTC/USDT'] = Decimal('500')
+        result = trading_bot._execute_buy('BTC/USDT', Decimal('100'))
+
+        assert result is True
+        assert trading_bot.positions['BTC/USDT'] > 0
+        assert trading_bot.allocated_balances['BTC/USDT'] < Decimal('500')
+        assert len(trading_bot.execution_history['BTC/USDT']) == 1
+        assert trading_bot.execution_history['BTC/USDT'][0]['action'] == 'buy'
+        assert trading_bot.total_trades == 1
+
