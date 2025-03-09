@@ -116,6 +116,10 @@ class TradingExecutor:
         Returns:
             bool: True if buy conditions are met
         """
+        # Limit consecutive trades to 3
+        if self._consecutive_trades >= 3:
+            return False
+
         # Calculate total portfolio value currently in positions
         total_position_value = Decimal("0")
         for symbol, volume in self.simulator.positions.items():

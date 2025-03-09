@@ -1,63 +1,68 @@
 """Tests for CoinOpportunityAnalyzer."""
-import unittest
 from decimal import Decimal
 import numpy as np
+import pytest
 from unittest.mock import patch, MagicMock
 from traid.ml.analysis.coin_analyzer import CoinOpportunityAnalyzer
 
 
-class TestCoinOpportunityAnalyzer(unittest.TestCase):
+class TestCoinOpportunityAnalyzer:
     """Test suite for CoinOpportunityAnalyzer."""
 
-    def setUp(self):
-        """Set up test case."""
-        self.analyzer = CoinOpportunityAnalyzer(lookback_window=10)
-        self.test_symbol = "BTC/USDT"
+    @pytest.fixture
+    def analyzer(self):
+        """Return a CoinOpportunityAnalyzer instance."""
+        return CoinOpportunityAnalyzer(lookback_window=10)
 
-    def test_update_coin_data(self):
+    @pytest.fixture
+    def test_symbol(self):
+        """Return a test symbol."""
+        return "BTC/USDT"
+
+    def test_update_coin_data(self, analyzer, test_symbol):
         """Test updating coin data with new price points."""
         # Add some test data
-        self.analyzer.update_coin_data(
-            symbol=self.test_symbol,
+        analyzer.update_coin_data(
+            symbol=test_symbol,
             price=Decimal("50000"),
             volume=Decimal("1.5")
         )
 
         # Assertions
-        self.assertIn(self.test_symbol, self.analyzer.coin_data)
-        self.assertEqual(len(self.analyzer.coin_data[self.test_symbol]["prices"]), 1)
-        self.assertEqual(self.analyzer.coin_data[self.test_symbol]["prices"][0], 50000.0)
-        self.assertEqual(self.analyzer.coin_data[self.test_symbol]["volumes"][0], 1.5)
+        assert test_symbol in analyzer.coin_data
+        assert len(analyzer.coin_data[test_symbol]["prices"]) == 1
+        assert analyzer.coin_data[test_symbol]["prices"][0] == 50000.0
+        assert analyzer.coin_data[test_symbol]["volumes"][0] == 1.5
 
         # Add more data points to test lookback window
         for i in range(15):  # Add 15 more points (exceeds lookback_window of 10)
-            self.analyzer.update_coin_data(
-                symbol=self.test_symbol,
+            analyzer.update_coin_data(
+                symbol=test_symbol,
                 price=Decimal(str(50000 + i * 100)),
                 volume=Decimal(str(1.5 + i * 0.1))
             )
 
         # Check that only lookback_window points are kept
-        self.assertEqual(len(self.analyzer.coin_data[self.test_symbol]["prices"]), 10)
+        assert len(analyzer.coin_data[test_symbol]["prices"]) == 10
         # First point should be removed, so first price should be 50600
-        self.assertEqual(self.analyzer.coin_data[self.test_symbol]["prices"][0], 50500.0)
+        assert analyzer.coin_data[test_symbol]["prices"][0] == 50500.0
 
     @patch('traid.ml.features.technical_indicators.TechnicalIndicators.calculate_rsi')
     @patch('traid.ml.features.technical_indicators.TechnicalIndicators.calculate_macd')
     @patch('traid.ml.features.technical_indicators.TechnicalIndicators.calculate_bollinger_bands')
-    def test_calculate_coin_score(self, mock_bb, mock_macd, mock_rsi):
+    def test_calculate_coin_score(self, mock_bb, mock_macd, mock_rsi, analyzer, test_symbol):
         """Test calculation of opportunity score for a coin."""
         # Setup mocks
         mock_rsi.return_value = np.array([25.0])  # Oversold - buying opportunity
         mock_macd.return_value = (
             np.array([0.02]),  # MACD line
             np.array([0.01]),  # Signal line
-            np.array([0.01])   # Histogram
+            np.array([0.01])  # Histogram
         )
         mock_bb.return_value = (
             np.array([52000.0]),  # Upper
             np.array([50000.0]),  # Middle
-            np.array([48000.0])   # Lower
+            np.array([48000.0])  # Lower
         )
 
         # Setup test data
@@ -65,18 +70,18 @@ class TestCoinOpportunityAnalyzer(unittest.TestCase):
         volumes = np.array([1.5, 1.6, 1.7, 1.8, 1.9])
 
         # Calculate score
-        score = self.analyzer._calculate_coin_score(self.test_symbol, prices, volumes)
+        score = analyzer._calculate_coin_score(test_symbol, prices, volumes)
 
         # Assertions
-        self.assertIsInstance(score, int)
-        self.assertTrue(0 <= score <= 100)
+        assert isinstance(score, int)
+        assert 0 <= score <= 100
         # Score should be increased from 50 because of oversold RSI and bullish MACD
-        self.assertTrue(score > 50)
+        assert score > 50
 
-    def test_get_best_opportunities(self):
+    def test_get_best_opportunities(self, analyzer):
         """Test retrieving best trading opportunities."""
         # Setup test data
-        self.analyzer.opportunity_scores = {
+        analyzer.opportunity_scores = {
             "BTC/USDT": 80,
             "ETH/USDT": 65,
             "SOL/USDT": 75,
@@ -85,19 +90,19 @@ class TestCoinOpportunityAnalyzer(unittest.TestCase):
         }
 
         # Get top 3 opportunities
-        top_opportunities = self.analyzer.get_best_opportunities(top_n=3)
+        top_opportunities = analyzer.get_best_opportunities(top_n=3)
 
         # Assertions
-        self.assertEqual(len(top_opportunities), 3)
-        self.assertEqual(top_opportunities[0][0], "BTC/USDT")  # Highest score
-        self.assertEqual(top_opportunities[0][1], 80)
-        self.assertEqual(top_opportunities[1][0], "SOL/USDT")  # Second highest
-        self.assertEqual(top_opportunities[2][0], "ETH/USDT")  # Third highest
+        assert len(top_opportunities) == 3
+        assert top_opportunities[0][0] == "BTC/USDT"  # Highest score
+        assert top_opportunities[0][1] == 80
+        assert top_opportunities[1][0] == "SOL/USDT"  # Second highest
+        assert top_opportunities[2][0] == "ETH/USDT"  # Third highest
 
-    def test_should_change_coin(self):
+    def test_should_change_coin(self, analyzer, test_symbol):
         """Test decision logic for changing coins."""
         # Setup test data
-        self.analyzer.opportunity_scores = {
+        analyzer.opportunity_scores = {
             "BTC/USDT": 80,
             "ETH/USDT": 65,
             "SOL/USDT": 95,  # Much better score than current
@@ -107,10 +112,7 @@ class TestCoinOpportunityAnalyzer(unittest.TestCase):
 
         # Test with current coin having good but not best score
         current_coin = "BTC/USDT"
-        new_coin = self.analyzer.should_change_coin(current_coin)
+        new_coin = analyzer.should_change_coin(current_coin)
 
-        # Der Test sollte die tatsächliche Implementierung prüfen
-        self.assertIsNone(new_coin)
-
-if __name__ == '__main__':
-    unittest.main()
+        # Test should check the actual implementation
+        assert new_coin is None

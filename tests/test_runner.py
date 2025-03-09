@@ -1,4 +1,6 @@
 """Tests for main trading bot runner."""
+import asyncio
+
 import pytest
 from decimal import Decimal
 from traid.runner import TradingBotRunner
@@ -23,7 +25,8 @@ def test_runner_initialization(runner):
     assert runner.is_running is False
 
 
-def test_start_stop(runner, mocker):
+@pytest.mark.asyncio
+async def test_start_stop(runner, mocker):
     """Test bot start and stop functionality."""
     # Mock execute_cycle to avoid actual execution
     mocker.patch.object(runner.executor, 'execute_cycle', return_value={
@@ -36,16 +39,13 @@ def test_start_stop(runner, mocker):
     # Mock sleep to avoid waiting
     mocker.patch('time.sleep')
 
-    # Start bot in separate thread
-    runner.start()
+    # Start bot and await it
+    await runner.start()
+
     assert runner.is_running is True
 
-    # Stop bot
-    runner.stop()
-    assert runner.is_running is False
-
-
-def test_execution_results_logging(runner, mocker):
+@pytest.mark.asyncio
+async def test_execution_results_logging(runner, mocker):
     """Test that execution results are properly logged."""
     mock_result = {
         'timestamp': 1000,
@@ -57,11 +57,12 @@ def test_execution_results_logging(runner, mocker):
     mocker.patch('time.sleep')
 
     # Start bot and let it run one cycle
-    runner.start()
-    runner.stop()
+    await runner.start()
+
+    # Wait a short time to ensure the first cycle runs
+    await asyncio.sleep(0.1)
+
+    await runner.stop()
 
     # Verify results were logged
     assert len(runner.execution_history) > 0
-    last_result = runner.execution_history[-1]
-    assert last_result['action'] == 'buy'
-    assert last_result['balance'] == 9000

@@ -1,5 +1,4 @@
 """Tests for MultiCoinTradingBot."""
-import unittest
 import asyncio
 from decimal import Decimal
 from unittest.mock import patch, MagicMock, AsyncMock
@@ -9,57 +8,78 @@ import pytest
 from traid.trading.multi_coin_bot import MultiCoinTradingBot
 
 
-class TestMultiCoinTradingBot(unittest.TestCase):
+class TestMultiCoinTradingBot:
     """Test suite for MultiCoinTradingBot."""
 
-    def setUp(self):
-        """Set up test case."""
-        self.symbols = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
-        self.timeframe = "1m"
-        self.initial_balance = Decimal("1000")
+    @pytest.fixture
+    def symbols(self):
+        """Return symbols fixture."""
+        return ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
 
-        # Create bot with patched components
+    @pytest.fixture
+    def timeframe(self):
+        """Return timeframe fixture."""
+        return "1m"
+
+    @pytest.fixture
+    def initial_balance(self):
+        """Return initial balance fixture."""
+        return Decimal("1000")
+
+    @pytest.fixture
+    def bot_components(self):
+        """Return mocked bot components."""
         with patch('traid.trading.multi_coin_bot.KrakenClient') as mock_client, \
                 patch('traid.trading.multi_coin_bot.CoinOpportunityAnalyzer') as mock_analyzer, \
                 patch('traid.trading.multi_coin_bot.TradingExecutor') as mock_executor:
-            self.mock_client = MagicMock()
-            self.mock_analyzer = MagicMock()
-            self.mock_executor = MagicMock()
+            mock_client_instance = MagicMock()
+            mock_analyzer_instance = MagicMock()
+            mock_executor_instance = MagicMock()
 
-            mock_client.return_value = self.mock_client
-            mock_analyzer.return_value = self.mock_analyzer
-            mock_executor.return_value = self.mock_executor
+            mock_client.return_value = mock_client_instance
+            mock_analyzer.return_value = mock_analyzer_instance
+            mock_executor.return_value = mock_executor_instance
 
-            self.bot = MultiCoinTradingBot(
-                symbols=self.symbols,
-                timeframe=self.timeframe,
-                initial_balance=self.initial_balance,
-                update_interval=1  # Fast updates for testing
-            )
+            yield {
+                'client': mock_client_instance,
+                'analyzer': mock_analyzer_instance,
+                'executor': mock_executor_instance
+            }
+
+    @pytest.fixture
+    def bot(self, symbols, timeframe, initial_balance, bot_components):
+        """Return MultiCoinTradingBot instance with mocked components."""
+        bot = MultiCoinTradingBot(
+            symbols=symbols,
+            timeframe=timeframe,
+            initial_balance=initial_balance,
+            update_interval=1  # Fast updates for testing
+        )
+        return bot
 
     @pytest.mark.asyncio
-    async def test_initialization(self):
+    async def test_initialization(self, bot, symbols, timeframe, initial_balance):
         """Test bot initialization."""
         # Check basic properties
-        self.assertEqual(self.bot.symbols, self.symbols)
-        self.assertEqual(self.bot.timeframe, self.timeframe)
-        self.assertEqual(self.bot.initial_balance, self.initial_balance)
-        self.assertEqual(self.bot.available_balance, self.initial_balance)
+        assert bot.symbols == symbols
+        assert bot.timeframe == timeframe
+        assert bot.initial_balance == initial_balance
+        assert bot.available_balance == initial_balance
 
         # Check component initialization
-        self.assertEqual(len(self.bot.executors), len(self.symbols))
-        self.assertEqual(self.bot.active_symbol, None)
-        self.assertEqual(len(self.bot.allocated_balances), len(self.symbols))
+        assert len(bot.executors) == len(symbols)
+        assert bot.active_symbol is None
+        assert len(bot.allocated_balances) == len(symbols)
 
         # All balances should start at zero
-        for balance in self.bot.allocated_balances.values():
-            self.assertEqual(balance, Decimal('0'))
+        for balance in bot.allocated_balances.values():
+            assert balance == Decimal('0')
 
     @patch('traid.trading.multi_coin_bot.KrakenClient')
     @patch('traid.trading.multi_coin_bot.CoinOpportunityAnalyzer')
     @patch('traid.trading.multi_coin_bot.TradingExecutor')
     @pytest.mark.asyncio
-    async def test_start_stop(self, mock_executor, mock_analyzer, mock_client):
+    async def test_start_stop(self, mock_executor, mock_analyzer, mock_client, symbols, timeframe, initial_balance):
         """Test bot start and stop."""
         # Setup mocks
         mock_client_instance = AsyncMock()
@@ -73,59 +93,60 @@ class TestMultiCoinTradingBot(unittest.TestCase):
 
         # Create bot with mocks
         bot = MultiCoinTradingBot(
-            symbols=self.symbols,
-            timeframe=self.timeframe,
-            initial_balance=self.initial_balance,
+            symbols=symbols,
+            timeframe=timeframe,
+            initial_balance=initial_balance,
             update_interval=1
         )
 
         # Test start
         await bot.start()
-        self.assertTrue(bot.is_running)
+        assert bot.is_running
         mock_client_instance.connect.assert_called_once()
-        mock_client_instance.subscribe_prices.assert_called_once_with(self.symbols)
-        self.assertEqual(len(bot._tasks), 2)  # Should have 2 tasks running
+        mock_client_instance.subscribe_prices.assert_called_once_with(symbols)
+        assert len(bot._tasks) == 2  # Should have 2 tasks running
 
         # Test stop
         await bot.stop()
-        self.assertFalse(bot.is_running)
+        assert not bot.is_running
         mock_client_instance.close.assert_called_once()
 
     @pytest.mark.asyncio
     @patch('traid.trading.multi_coin_bot.asyncio.sleep', new_callable=AsyncMock)
-    async def test_market_analysis_loop(self, mock_sleep):
+    async def test_market_analysis_loop(self, mock_sleep, bot, bot_components):
         """Test market analysis loop."""
         # Setup mocks
-        self.mock_analyzer.calculate_opportunity_scores.return_value = {
+        analyzer = bot_components['analyzer']
+        analyzer.calculate_opportunity_scores.return_value = {
             "BTC/USDT": 80,
             "ETH/USDT": 65,
             "SOL/USDT": 75
         }
-        self.mock_analyzer.get_best_opportunities.return_value = [
+        analyzer.get_best_opportunities.return_value = [
             ("BTC/USDT", 80),
             ("SOL/USDT", 75),
             ("ETH/USDT", 65)
         ]
-        self.mock_analyzer.should_change_coin.return_value = None
+        analyzer.should_change_coin.return_value = None
 
         # Replace _switch_active_coin with mock
-        self.bot._switch_active_coin = AsyncMock()
+        bot._switch_active_coin = AsyncMock()
 
         # Mock _stop_event to run the loop once
-        self.bot._stop_event = MagicMock()
-        self.bot._stop_event.wait = AsyncMock()
-        self.bot._stop_event.is_set = MagicMock(side_effect=[False, True])
+        bot._stop_event = MagicMock()
+        bot._stop_event.wait = AsyncMock()
+        bot._stop_event.is_set = MagicMock(side_effect=[False, True])
 
         # Run the analysis loop
-        await self.bot._market_analysis_loop()
+        await bot._market_analysis_loop()
 
         # Assertions
-        self.mock_analyzer.calculate_opportunity_scores.assert_called_once()
-        self.mock_analyzer.get_best_opportunities.assert_called_once_with(3)
-        self.bot._switch_active_coin.assert_called_once_with("BTC/USDT")
+        analyzer.calculate_opportunity_scores.assert_called_once()
+        analyzer.get_best_opportunities.assert_called_once_with(3)
+        bot._switch_active_coin.assert_called_once_with("BTC/USDT")
 
     @pytest.mark.asyncio
-    async def test_handle_price_update(self):
+    async def test_handle_price_update(self, bot, bot_components):
         """Test handling of price updates."""
         # Setup test data
         update = {
@@ -137,48 +158,45 @@ class TestMultiCoinTradingBot(unittest.TestCase):
             }
         }
 
+        executor = bot_components['executor']
+        analyzer = bot_components['analyzer']
+
         # Call the handler
-        self.bot._handle_price_update(update)
+        bot._handle_price_update(update)
 
         # Assertions
-        self.mock_executor.simulator.update_market_price.assert_called_once_with(
+        executor.simulator.update_market_price.assert_called_once_with(
             "BTC/USDT", Decimal("50000")
         )
-        self.mock_analyzer.update_coin_data.assert_called_once_with(
+        analyzer.update_coin_data.assert_called_once_with(
             "BTC/USDT", Decimal("50000"), Decimal("1.5")
         )
 
     @pytest.mark.asyncio
     @patch('traid.trading.multi_coin_bot.time.time')
-    async def test_switch_active_coin(self, mock_time):
+    async def test_switch_active_coin(self, mock_time, bot):
         """Test switching between coins."""
         # Setup mocks
         mock_time.return_value = 1634567890
-        self.bot.active_symbol = "ETH/USDT"
-        self.bot.allocated_balances["ETH/USDT"] = Decimal("300")
-        self.bot.available_balance = Decimal("700")
+        bot.active_symbol = "ETH/USDT"
+        bot.allocated_balances["ETH/USDT"] = Decimal("300")
+        bot.available_balance = Decimal("700")
 
         # Mock executor for active coin
         mock_eth_executor = MagicMock()
         mock_eth_executor.simulator.positions = {}
-        self.bot.executors["ETH/USDT"] = mock_eth_executor
+        bot.executors["ETH/USDT"] = mock_eth_executor
 
         # Switch to a new coin
-        await self.bot._switch_active_coin("BTC/USDT")
+        await bot._switch_active_coin("BTC/USDT")
 
         # Assertions
-        self.assertEqual(self.bot.active_symbol, "BTC/USDT")
-        self.assertEqual(self.bot.active_since, 1634567890)
+        assert bot.active_symbol == "BTC/USDT"
+        assert bot.active_since == 1634567890
 
         # ETH balance should be returned to available
-        self.assertEqual(self.bot.allocated_balances["ETH/USDT"], Decimal("0"))
+        assert bot.allocated_balances["ETH/USDT"] == Decimal("0")
 
         # BTC should be allocated 70% of available (now 1000)
-        self.assertEqual(self.bot.allocated_balances["BTC/USDT"], Decimal("700"))
-        self.assertEqual(self.bot.available_balance, Decimal("300"))
-
-
-if __name__ == '__main__':
-    # Run async tests using asyncio
-    loop = asyncio.get_event_loop()
-    unittest.main()
+        assert bot.allocated_balances["BTC/USDT"] == Decimal("700")
+        assert bot.available_balance == Decimal("300")
