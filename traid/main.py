@@ -88,7 +88,10 @@ async def run_bot():
     """Run trading bot with WebSocket connection."""
     # Get user configuration
     INITIAL_BALANCE, MODE = get_user_config()
-    TIMEFRAME = "1m"  # 1 minute for more frequent updates
+    TIMEFRAME = "1m"  # 1 minute timeframe
+
+    # Create Kraken client
+    client = KrakenClient()
 
     if MODE == "1":
         # Single coin mode (original functionality)
