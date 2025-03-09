@@ -170,3 +170,22 @@ class TradingBot:
         print("\n✅ Trading bot is now active")
         print(f"💪 Strategy: {'AGGRESSIVE' if not self.single_coin_mode else 'SINGLE-COIN FOCUS'}")
         self._print_portfolio_status()
+
+    async def stop(self) -> None:
+        """Stop the trading bot."""
+        if not self.is_running:
+            return
+
+        print("🛑 Stopping trading bot...")
+        self._stop_event.set()
+
+        # Wait for tasks to complete
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+
+        # Close WebSocket connection
+        await self.client.close()
+
+        self.is_running = False
+        print("\n⏹️ Trading bot stopped")
+        self._print_summary()
