@@ -234,7 +234,7 @@ class TestTradingBot:
         better_coin = trading_bot._should_change_coin()
         assert better_coin is None
 
-@pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_switch_active_coin(self, trading_bot):
         """Test switching to a different trading coin."""
         trading_bot.active_symbol = 'BTC/USDT'
@@ -248,3 +248,21 @@ class TestTradingBot:
             assert trading_bot.active_symbol == 'ETH/USDT'
             assert trading_bot.allocated_balances['ETH/USDT'] > 0
             assert trading_bot.allocated_balances['BTC/USDT'] == 0
+
+    def test_generate_trading_signal(self, trading_bot):
+        """Test trading signal generation."""
+        trading_bot.coin_data['BTC/USDT'] = {
+            'prices': [100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128],
+            'volumes': [10] * 15,
+            'timestamps': [1000 + 60 * i for i in range(15)]
+        }
+
+        with patch.object(trading_bot, '_calculate_rsi', return_value=30):  # Oversold condition
+            signal = trading_bot._generate_trading_signal('BTC/USDT')
+            assert signal == 1  # Should generate a buy signal
+
+        with patch.object(trading_bot, '_calculate_rsi', return_value=70):  # Overbought condition
+            trading_bot.positions['BTC/USDT'] = Decimal('0.5')  # Need a position to sell
+            signal = trading_bot._generate_trading_signal('BTC/USDT')
+            assert signal == -1  # Should generate a sell signal
+
