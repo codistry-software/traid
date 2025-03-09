@@ -122,3 +122,21 @@ class TestTradingBot:
             await trading_bot.stop()
             assert trading_bot.is_running is False
             trading_bot.client.close.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_analysis_loop(self, trading_bot):
+        """Test the analysis loop functionality."""
+        # Setup for single iteration of the loop
+        trading_bot.is_running = True
+        trading_bot._stop_event = MagicMock()
+        trading_bot._stop_event.is_set.side_effect = [False, True]  # Run once then stop
+
+        with patch.object(trading_bot, '_calculate_opportunity_scores'), \
+                patch.object(trading_bot, '_get_top_opportunities', return_value=[('ETH/USDT', 90)]), \
+                patch.object(trading_bot, '_should_change_coin', return_value='ETH/USDT'), \
+                patch.object(trading_bot, '_switch_active_coin', new_callable=AsyncMock), \
+                patch.object(trading_bot, '_print_portfolio_status'), \
+                patch.object(asyncio, 'sleep', new_callable=AsyncMock):
+            await trading_bot._analysis_loop()
+            trading_bot._calculate_opportunity_scores.assert_called_once()
+            trading_bot._switch_active_coin.assert_called_once_with('ETH/USDT')
