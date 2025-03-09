@@ -435,3 +435,15 @@ async def test_initialize_historical_data_exception(client, monkeypatch):
 
     # Assertions
     assert result is False
+
+@pytest.mark.asyncio
+async def test_reconnect_once_exceeds_max_attempts():
+    """Test that _reconnect_once() returns False when max attempts is exceeded."""
+    client = KrakenClient()
+    client._reconnect_attempts = 5
+    client._max_reconnect_attempts = 5
+    client.connect = AsyncMock(return_value=True)  # Would normally reconnect if not exceeded
+
+    result = await client._reconnect_once()
+    assert result is False, "Should return False if attempts exceed max"
+    client.connect.assert_not_called(), "Should not call connect() if max exceeded"
