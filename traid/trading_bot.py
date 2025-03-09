@@ -233,3 +233,39 @@ class TradingBot:
             except Exception as e:
                 print(f"❌ Error in market analysis: {e}")
                 await asyncio.sleep(60)  # Shorter recovery time for errors
+
+    async def _trading_loop(self) -> None:
+        """Execute trading actions every second."""
+        while not self._stop_event.is_set():
+            try:
+                # Only trade if we have an active symbol with allocated balance
+                if self.active_symbol and self.allocated_balances.get(self.active_symbol, Decimal('0')) > Decimal('0'):
+
+                    # Get latest price
+                    price = self.client.get_latest_price(self.active_symbol)
+
+                    if not price or price <= 0:
+                        await asyncio.sleep(1)
+                        continue
+
+                    # Generate signal
+                    signal = self._generate_trading_signal(self.active_symbol)
+
+                    # Execute trade based on signal
+                    if signal == 1:  # Buy signal
+                        success = self._execute_buy(self.active_symbol, price)
+                        if success:
+                            self._print_portfolio_status()
+
+                    elif signal == -1:  # Sell signal
+                        success = self._execute_sell(self.active_symbol, price)
+                        if success:
+                            self._print_portfolio_status()
+
+                # Wait before next check (every second)
+                await asyncio.sleep(1)
+
+            except Exception as e:
+                print(f"❌ Error in trading execution: {e}")
+                await asyncio.sleep(5)  # Shorter recovery time for errors
+
