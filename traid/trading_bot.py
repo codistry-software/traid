@@ -615,3 +615,65 @@ class TradingBot:
 
         print("-" * 40)
 
+   def _print_summary(self) -> None:
+        """Print trading session summary."""
+        # Calculate session duration
+        if self.start_time:
+            elapsed_seconds = int(time.time()) - self.start_time
+            elapsed_hours = elapsed_seconds // 3600
+            elapsed_minutes = (elapsed_seconds % 3600) // 60
+            elapsed_seconds = elapsed_seconds % 60
+            time_str = f"{elapsed_hours}h {elapsed_minutes}m {elapsed_seconds}s"
+        else:
+            time_str = "N/A"
+
+        # Calculate final portfolio value
+        final_value = self.available_balance
+        for symbol, balance in self.allocated_balances.items():
+            final_value += balance
+
+        for symbol, volume in self.positions.items():
+            price = self.client.get_latest_price(symbol)
+            if price:
+                final_value += volume * price
+
+        # Calculate profit
+        profit = final_value - self.initial_balance
+        profit_percent = (profit / self.initial_balance * 100) if self.initial_balance > 0 else Decimal('0')
+
+        print("\n" + "=" * 50)
+        print("               TRADING SESSION SUMMARY               ")
+        print("=" * 50)
+
+        print(f"\n⏱️ Session Duration: {time_str}")
+        print(f"🤖 Trading Mode: {'Single-coin' if self.single_coin_mode else 'Multi-coin'}")
+        print(f"👀 Coins Monitored: {len(self.symbols)}")
+
+        print(f"\n💰 Initial Portfolio: {self.initial_balance:.2f} USDT")
+        print(f"💰 Final Portfolio: {final_value:.2f} USDT")
+
+        # Show profit/loss with color indicators
+        if profit > 0:
+            print(f"📊 Total Profit/Loss: 🟢 +{profit:.2f} USDT (+{profit_percent:.2f}%)")
+        elif profit < 0:
+            print(f"📊 Total Profit/Loss: 🔴 {profit:.2f} USDT ({profit_percent:.2f}%)")
+        else:
+            print(f"📊 Total Profit/Loss: {profit:.2f} USDT ({profit_percent:.2f}%)")
+
+        # Trading statistics
+        print(f"\n🔄 Total Trades: {self.total_trades}")
+
+        if self.total_trades > 0:
+            win_rate = (self.profitable_trades / self.total_trades) * 100
+            print(f"✅ Profitable Trades: {self.profitable_trades} ({win_rate:.2f}%)")
+
+        # Print final positions
+        if self.positions:
+            print("\n📊 Remaining Positions:")
+            for symbol, volume in self.positions.items():
+                price = self.client.get_latest_price(symbol)
+                value = volume * price if price else Decimal('0')
+                print(f"  {symbol}: {volume:.6f} (Value: {value:.2f} USDT)")
+
+        print("\n" + "=" * 50)
+
