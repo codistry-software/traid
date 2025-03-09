@@ -22,8 +22,8 @@ class MarketData:
         Returns:
             List[Dict]: List of OHLCV candles with standardized format
         """
-        response = self._client.get_ohlcv(self.symbol, self.timeframe)
-        return self._parse_ohlcv_response(response)
+        data = self._client.get_ohlcv(self.symbol, 1)
+        return data if data is not None else []
 
     def _parse_ohlcv_response(self, response: Dict) -> List[Dict]:
         """Parse Kraken OHLCV response into standardized format.
