@@ -94,7 +94,7 @@ async def run_bot():
     client = KrakenClient()
 
     if MODE == "1":
-        # Single coin mode (original functionality)
+        # Single coin mode
         SYMBOL = "BTC/USDT"
 
         print(f"\nStarting bot with:")
@@ -104,10 +104,12 @@ async def run_bot():
         print(f"Mode: Single coin trading")
 
         # Create and start bot
-        bot = TradingBotRunner(
-            symbol=SYMBOL,
+        bot = TradingBot(
+            symbols=[SYMBOL],
             timeframe=TIMEFRAME,
-            initial_balance=INITIAL_BALANCE
+            initial_balance=INITIAL_BALANCE,
+            client=client,
+            single_coin_mode=True
         )
     else:
         # Multi-coin mode (new functionality)
