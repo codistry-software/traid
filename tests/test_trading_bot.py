@@ -233,3 +233,18 @@ class TestTradingBot:
         trading_bot.opportunity_scores = {'BTC/USDT': 76, 'ETH/USDT': 85}
         better_coin = trading_bot._should_change_coin()
         assert better_coin is None
+
+@pytest.mark.asyncio
+    async def test_switch_active_coin(self, trading_bot):
+        """Test switching to a different trading coin."""
+        trading_bot.active_symbol = 'BTC/USDT'
+        trading_bot.positions['BTC/USDT'] = Decimal('0.5')
+        trading_bot.allocated_balances['BTC/USDT'] = Decimal('200')
+        trading_bot.available_balance = Decimal('300')
+
+        with patch.object(trading_bot, '_execute_sell', return_value=True):
+            await trading_bot._switch_active_coin('ETH/USDT')
+            trading_bot._execute_sell.assert_called_once_with('BTC/USDT', Decimal('100'), Decimal('0.5'))
+            assert trading_bot.active_symbol == 'ETH/USDT'
+            assert trading_bot.allocated_balances['ETH/USDT'] > 0
+            assert trading_bot.allocated_balances['BTC/USDT'] == 0
