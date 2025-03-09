@@ -447,3 +447,17 @@ async def test_reconnect_once_exceeds_max_attempts():
     result = await client._reconnect_once()
     assert result is False, "Should return False if attempts exceed max"
     client.connect.assert_not_called(), "Should not call connect() if max exceeded"
+
+@pytest.mark.asyncio
+@patch("asyncio.sleep", return_value=None)  # to skip actual sleep during tests
+async def test_reconnect_once_success(mock_sleep):
+    """Test that _reconnect_once() calls connect() when under max attempts."""
+    client = KrakenClient()
+    client._reconnect_attempts = 0
+    client._max_reconnect_attempts = 5
+    client.connect = AsyncMock(return_value=True)
+
+    result = await client._reconnect_once()
+    assert result is True, "Should return True if connect() succeeds"
+    client.connect.assert_awaited_once(), "Should call connect() to attempt reconnect"
+    mock_sleep.assert_called_once(), "Should sleep for exponential backoff"
