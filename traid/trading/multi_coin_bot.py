@@ -221,11 +221,42 @@ class MultiCoinTradingBot:
         """Execute trading actions on the active coin."""
         print("Starting trading execution loop...")
 
+        # Wait until we have proper analysis before attempting any trades
+        while not self._stop_event.is_set() and not self._analysis_complete:
+            print("Waiting for market analysis to complete before trading...")
+            await asyncio.sleep(10)
+            continue
+
+        print("Trading execution loop is now active and will execute trades.")
+
         while not self._stop_event.is_set():
+            all_prices = self.client.get_multi_coin_data()
+            print(f"DEBUG: Available price data for {len(all_prices)} symbols: {list(all_prices.keys())}")
+            print(f"DEBUG: Looking for price data for {self.active_symbol}")
+
+            # Check if symbol exists but with different case
+            if self.active_symbol not in all_prices:
+                for key in all_prices.keys():
+                    if key.upper() == self.active_symbol.upper():
+                        print(f"DEBUG: Symbol case mismatch! Found {key} instead of {self.active_symbol}")
+
+            # Print the actual price data for the symbol
+            if self.active_symbol in all_prices:
+                price_data = all_prices[self.active_symbol]
+                print(f"DEBUG: Price data for {self.active_symbol}: {price_data}")
             try:
                 # Only trade if we have an active symbol with allocated balance
                 if self.active_symbol and self.allocated_balances.get(self.active_symbol, Decimal('0')) > Decimal('0'):
                     executor = self.executors[self.active_symbol]
+
+                    # Verify we have market data
+                    latest_price = self.client.get_latest_price(self.active_symbol)
+
+                    print(latest_price)
+                    if latest_price is None or latest_price <= 0:
+                        print(f"No market data available for {self.active_symbol}, waiting...")
+                        await asyncio.sleep(5)
+                        continue
 
                     # Update executor's balance
                     executor.simulator.balance.available = self.allocated_balances[self.active_symbol]
@@ -253,14 +284,21 @@ class MultiCoinTradingBot:
                             if trade['value'] > trade['price'] * trade['volume']:
                                 self.profitable_trades += 1
                                 profit = Decimal(str(trade['value'])) - (
-                                            Decimal(str(trade['price'])) * Decimal(str(trade['volume'])))
+                                        Decimal(str(trade['price'])) * Decimal(str(trade['volume'])))
                                 self.total_profit_loss += profit
 
                     self._print_cycle_result(self.active_symbol, result)
+                else:
+                    # No active symbol yet
+                    if not self.active_symbol:
+                        print("Waiting for market analysis to select trading pair...")
+                    else:
+                        print(f"Active symbol {self.active_symbol} has no allocated balance yet...")
+                    await asyncio.sleep(5)
 
                 # Wait before next execution
                 try:
-                    await asyncio.wait_for(self._stop_event.wait(), timeout=10)  # Check more frequently
+                    await asyncio.wait_for(self._stop_event.wait(), timeout=10)
                 except asyncio.TimeoutError:
                     pass
 
