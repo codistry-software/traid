@@ -77,3 +77,16 @@ class TestTradingBot:
         assert trading_bot.current_prices["BTC/USDT"] == Decimal('110')
         assert 110 in trading_bot.coin_data["BTC/USDT"]["prices"]
         assert 20 in trading_bot.coin_data["BTC/USDT"]["volumes"]
+
+    def test_update_coin_data(self, trading_bot):
+        """Test coin data update functionality."""
+        trading_bot._update_coin_data("BTC/USDT", Decimal('120'), Decimal('30'))
+        assert 120 in trading_bot.coin_data["BTC/USDT"]["prices"]
+        assert 30 in trading_bot.coin_data["BTC/USDT"]["volumes"]
+
+        # Test max length constraint
+        for i in range(60):  # Add more than max_len=50 items
+            trading_bot._update_coin_data("BTC/USDT", Decimal(i), Decimal(i))
+
+        assert len(trading_bot.coin_data["BTC/USDT"]["prices"]) == 50
+        assert trading_bot.coin_data["BTC/USDT"]["prices"][-1] == 59  # Should have the latest value
