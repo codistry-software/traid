@@ -291,3 +291,31 @@ class TradingBot:
                 self.opportunity_scores[symbol] = 50
 
         return self.opportunity_scores
+
+    def _calculate_rsi(self, prices: np.ndarray, period: int = 14) -> float:
+        """Calculate Relative Strength Index."""
+        if len(prices) < period + 1:
+            return 50
+
+        # Calculate price changes
+        deltas = np.diff(prices)
+
+        # Split gains and losses
+        gains = deltas.copy()
+        losses = deltas.copy()
+        gains[gains < 0] = 0
+        losses[losses > 0] = 0
+        losses = abs(losses)
+
+        # Calculate average gains and losses
+        avg_gain = np.mean(gains[:period])
+        avg_loss = np.mean(losses[:period])
+
+        # Calculate RS and RSI
+        if avg_loss == 0:
+            return 100
+
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+
+        return rsi
