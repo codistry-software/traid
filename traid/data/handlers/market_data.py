@@ -24,15 +24,3 @@ class MarketData:
         """
         data = self._client.get_ohlcv(self.symbol, 1)
         return data if data is not None else []
-
-    def _parse_ohlcv_response(self, response: Dict) -> List[Dict]:
-        """Parse Kraken OHLCV response into standardized format.
-
-        Args:
-            response: Raw Kraken API response
-
-        Returns:
-            List[Dict]: List of parsed OHLCV candles
-        """
-        ohlcv_list = OHLCV.parse_kraken_response(response)
-        return [candle.to_dict() for candle in ohlcv_list]
