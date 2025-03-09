@@ -62,6 +62,10 @@ class MultiCoinTradingBot:
         self._stop_event = asyncio.Event()
         self._tasks = []
 
+        # Add initialization state flags
+        self._data_initialized = False
+        self._analysis_complete = False
+
         # Performance metrics
         self.total_trades = 0
         self.profitable_trades = 0
