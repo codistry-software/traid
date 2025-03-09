@@ -442,8 +442,17 @@ class KrakenClient:
         return f"{base}/{quote}"
 
     async def close(self) -> None:
-        """Close WebSocket connection."""
+        """Close WebSocket connection gracefully."""
         self.running = False
         if self.ws:
             await self.ws.close()
             self.ws = None
+
+        if self._message_handler_task:
+            # Wait for handler to exit
+            await asyncio.sleep(0.1)
+            if not self._message_handler_task.done():
+                self._message_handler_task.cancel()
+            self._message_handler_task = None
+
+        print("WebSocket and message handler closed.")
