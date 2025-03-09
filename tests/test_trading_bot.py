@@ -59,3 +59,10 @@ class TestTradingBot:
         assert trading_bot.active_symbol is None
         assert trading_bot.positions == {}
         assert 'BTC/USDT' in trading_bot.execution_history
+
+    def test_init_single_coin(self, single_coin_bot):
+        """Test initialization in single coin mode."""
+        assert single_coin_bot.symbols == ['BTC/USDT']
+        assert single_coin_bot.active_symbol == 'BTC/USDT'
+        assert single_coin_bot.allocated_balances['BTC/USDT'] == Decimal('1000')
+        assert single_coin_bot.single_coin_mode is True
