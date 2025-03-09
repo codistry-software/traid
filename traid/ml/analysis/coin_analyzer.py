@@ -236,8 +236,7 @@ class CoinOpportunityAnalyzer:
         current_score = self.opportunity_scores[current_coin]
 
         # Only switch if the new coin has a significantly better score
-        # (at least 15 points higher)
-        if best_coin != current_coin and best_score > current_score + 15:
+        if best_coin != current_coin and best_score > current_score + self.switch_threshold:
             return best_coin
 
         return None
