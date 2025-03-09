@@ -534,3 +534,18 @@ class TradingBot:
 
         return True
 
+    def _get_average_buy_price(self, symbol: str) -> Optional[Decimal]:
+        """Calculate average buy price for a symbol."""
+        buy_trades = [t for t in self.execution_history.get(symbol, []) if t['action'] == 'buy']
+
+        if not buy_trades:
+            return None
+
+        total_cost = sum(t['cost'] for t in buy_trades)
+        total_volume = sum(t['volume'] for t in buy_trades)
+
+        if total_volume == 0:
+            return None
+
+        return Decimal(str(total_cost)) / Decimal(str(total_volume))
+
