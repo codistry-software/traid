@@ -269,3 +269,25 @@ class TradingBot:
                 print(f"❌ Error in trading execution: {e}")
                 await asyncio.sleep(5)  # Shorter recovery time for errors
 
+    def _calculate_opportunity_scores(self) -> Dict[str, int]:
+        """Calculate opportunity scores for all coins."""
+        for symbol, data in self.coin_data.items():
+            # Skip if not enough data
+            if len(data['prices']) < 10:
+                self.opportunity_scores[symbol] = 50  # Neutral score
+                continue
+
+            try:
+                # Convert to numpy arrays
+                prices = np.array(data['prices'])
+                volumes = np.array(data['volumes'])
+
+                # Calculate score
+                score = self._calculate_coin_score(symbol, prices, volumes)
+                self.opportunity_scores[symbol] = score
+
+            except Exception as e:
+                print(f"Error calculating score for {symbol}: {e}")
+                self.opportunity_scores[symbol] = 50
+
+        return self.opportunity_scores
