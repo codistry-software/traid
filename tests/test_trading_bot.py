@@ -220,3 +220,16 @@ class TestTradingBot:
             assert best == 'ETH/USDT'
             trading_bot._get_top_opportunities.assert_called_once_with(1)
 
+    def test_should_change_coin(self, trading_bot):
+        """Test coin change determination logic."""
+        trading_bot.active_symbol = 'BTC/USDT'
+        trading_bot.opportunity_scores = {'BTC/USDT': 70, 'ETH/USDT': 85}
+
+        # ETH score is 15 higher than BTC, should change
+        better_coin = trading_bot._should_change_coin()
+        assert better_coin == 'ETH/USDT'
+
+        # If difference is less than 10, should not change
+        trading_bot.opportunity_scores = {'BTC/USDT': 76, 'ETH/USDT': 85}
+        better_coin = trading_bot._should_change_coin()
+        assert better_coin is None
