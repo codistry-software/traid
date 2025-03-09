@@ -157,3 +157,42 @@ class TestTradingBot:
             await trading_bot._trading_loop()
             trading_bot._generate_trading_signal.assert_called_once_with('BTC/USDT')
             trading_bot._execute_buy.assert_called_once_with('BTC/USDT', Decimal('100'))
+
+    def test_calculate_opportunity_scores(self, trading_bot):
+        """Test opportunity score calculation."""
+        # Setup coin data
+        trading_bot.coin_data = {
+            'BTC/USDT': {
+                'prices': [90, 95, 100, 105, 110, 115, 120],
+                'volumes': [10, 12, 15, 18, 20, 25, 30],
+                'timestamps': [1000, 1060, 1120, 1180, 1240, 1300, 1360]
+            },
+            'ETH/USDT': {
+                'prices': [18, 19, 20, 21, 22, 23, 24],
+                'volumes': [100, 110, 120, 130, 140, 150, 160],
+                'timestamps': [1000, 1060, 1120, 1180, 1240, 1300, 1360]
+            }
+        }
+
+        # Use monkeypatch to override the method for the test duration
+        original_score_method = trading_bot._calculate_coin_score
+
+        def mock_score_method(symbol, prices, volumes):
+            return 75 if symbol == 'BTC/USDT' else 65
+
+        trading_bot._calculate_coin_score = mock_score_method
+
+        try:
+            scores = trading_bot._calculate_opportunity_scores()
+            assert scores['BTC/USDT'] == 75
+            assert scores['ETH/USDT'] == 65
+        finally:
+            # Restore the original method
+            trading_bot._calculate_coin_score = original_score_method
+
+    def test_calculate_rsi(self, trading_bot):
+        """Test RSI calculation."""
+        prices = np.array([100, 102, 104, 103, 105, 107, 109, 108, 110, 112,
+                           111, 113, 115, 114, 116, 118, 120])
+        rsi = trading_bot._calculate_rsi(prices)
+        assert 0 <= rsi <= 100  # RSI must be between 0 and 100
