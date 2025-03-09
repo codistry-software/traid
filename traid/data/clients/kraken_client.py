@@ -1,5 +1,7 @@
 """Kraken WebSocket client with multi-coin support for real-time market data."""
 import json
+import ssl
+
 import websockets
 import asyncio
 import aiohttp
@@ -143,7 +145,6 @@ class KrakenClient:
             }
             await self.ws.send(json.dumps(message))
             self.subscriptions.add(formatted_symbol)
-            print(f"Subscribed to {symbol} ticker")
 
     async def _message_handler(self) -> None:
         """Handle incoming WebSocket messages."""
@@ -297,18 +298,16 @@ class KrakenClient:
             return self.ohlcv_data[symbol][-limit:]
         return None
 
-    async def initialize_historical_data(self, symbols, interval=5, since=None, limit=100):
-        """
-        Fetch historical OHLCV data for specified symbols.
+    async def fetch_historical_data(self, symbols, interval=5, limit=200):
+        """Fetch historical OHLCV data from Kraken API.
 
         Args:
-            symbols (list): List of symbols to fetch data for
-            interval (int): Candle interval in minutes
-            since (int): Return data since timestamp (optional)
-            limit (int): Maximum number of candles to fetch
+            symbols: List of trading pair symbols
+            interval: Candle interval in minutes
+            limit: Number of candles to fetch per symbol
 
         Returns:
-            bool: True if successful
+            Dict mapping symbols to lists of OHLCV data
         """
         # Map minutes to Kraken interval format
         interval_map = {
@@ -321,54 +320,77 @@ class KrakenClient:
             interval = 5  # Default to 5 minutes if invalid interval
 
         kraken_interval = interval_map[interval]
-        success = True
+        historical_data = {}
+        failed_symbols = []
 
         for symbol in symbols:
-            formatted_symbol = self._format_symbol(symbol)
-            endpoint = f"{self.REST_API_URL}/OHLC"
-
-            # Prepare params
-            params = {
-                "pair": formatted_symbol.replace("/", ""),
-                "interval": kraken_interval
-            }
-
-            if since:
-                params["since"] = since
-
             try:
+                formatted_symbol = self._format_symbol(symbol)
+                endpoint = f"{self.REST_API_URL}/OHLC"
+
+                # Prepare request parameters
+                params = {
+                    "pair": formatted_symbol.replace("/", ""),
+                    "interval": kraken_interval
+                }
+
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(endpoint, params=params) as response:
-                        if response.status == 200:
-                            data = await response.json()
+                    ssl_context = ssl.create_default_context()
+                    ssl_context.check_hostname = False
+                    ssl_context.verify_mode = ssl.CERT_NONE
 
-                            if "result" in data and data["error"] == [] and data["result"]:
-                                pair_data = list(data["result"].keys())[0]
-                                ohlc_data = data["result"][pair_data]
+                    try:
+                        # Make API request
+                        async with session.get(endpoint, params=params, ssl=ssl_context) as response:
+                            if response.status == 200:
+                                data = await response.json()
 
-                                # Initialize the symbol's data list if it doesn't exist
-                                if symbol not in self.ohlcv_data:
-                                    self.ohlcv_data[symbol] = []
+                                if "result" in data and data["error"] == [] and data["result"]:
+                                    pair_data = list(data["result"].keys())[0]
+                                    ohlc_data = data["result"][pair_data]
 
-                                for candle in ohlc_data[-limit:]:  # Get last 'limit' candles
-                                    timestamp, open_price, high, low, close, vwap, volume, count = candle
+                                    if len(ohlc_data) == 0:
+                                        failed_symbols.append((symbol, "Empty OHLC data returned"))
+                                        continue
 
-                                    self.ohlcv_data[symbol].append({
-                                        "timestamp": int(timestamp),
-                                        "open": Decimal(str(open_price)),
-                                        "high": Decimal(str(high)),
-                                        "low": Decimal(str(low)),
-                                        "close": Decimal(str(close)),
-                                        "volume": Decimal(str(volume))
-                                    })
+                                    # Initialize data array for this symbol
+                                    historical_data[symbol] = []
+
+                                    # Process all candles (up to limit)
+                                    for candle in ohlc_data[-limit:]:
+                                        timestamp, open_price, high, low, close, vwap, volume, count = candle
+
+                                        # Store normalized data
+                                        historical_data[symbol].append({
+                                            "timestamp": int(timestamp),
+                                            "open": float(open_price),
+                                            "high": float(high),
+                                            "low": float(low),
+                                            "close": float(close),
+                                            "volume": float(volume)
+                                        })
+                                else:
+                                    error_msg = "API error"
+                                    if "error" in data and data["error"]:
+                                        error_msg = f"API error: {data['error']}"
+                                    failed_symbols.append((symbol, error_msg))
                             else:
-                                success = False
-                        else:
-                            success = False
-            except Exception:
-                success = False
+                                response_text = await response.text()
+                                failed_symbols.append((symbol, f"HTTP {response.status}: {response_text[:100]}"))
+                    except aiohttp.ClientError as ce:
+                        failed_symbols.append((symbol, f"Connection error: {str(ce)}"))
+            except Exception as e:
+                import traceback
+                failed_symbols.append((symbol, f"Exception: {str(e)[:100]}"))
+                print(f"Error processing {symbol}: {str(e)}")
+                print(traceback.format_exc())
 
-        return success
+        # Print summary
+        print(f"Fetched historical data: {len(historical_data)}/{len(symbols)} symbols successful")
+        if failed_symbols:
+            print(f"Failed to fetch data for {len(failed_symbols)} symbols")
+
+        return historical_data
 
     def _format_symbol(self, symbol: str) -> str:
         """Format trading pair symbol for Kraken API."""
