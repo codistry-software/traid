@@ -189,3 +189,47 @@ class TradingBot:
         self.is_running = False
         print("\n⏹️ Trading bot stopped")
         self._print_summary()
+
+    async def _analysis_loop(self) -> None:
+        """Analyze market data and update opportunity scores every 5 minutes."""
+        while not self._stop_event.is_set():
+            try:
+                # Skip analysis in single-coin mode
+                if self.single_coin_mode:
+                    await asyncio.sleep(300)  # 5 minutes
+                    continue
+
+                # Calculate opportunity scores
+                self._calculate_opportunity_scores()
+
+                # Get best opportunities
+                top_opportunities = self._get_top_opportunities(3)
+
+                if top_opportunities:
+                    print("\n📊 MARKET ANALYSIS UPDATE 📊")
+                    print("Top Trading Opportunities:")
+                    for symbol, score in top_opportunities:
+                        print(f"  {symbol}: Score {score}/100")
+
+                    # Check if we should switch coins
+                    if self.active_symbol:
+                        better_coin = self._should_change_coin()
+                        if better_coin and better_coin != self.active_symbol:
+                            print(f"\n🔄 Switching target from {self.active_symbol} to {better_coin}")
+                            await self._switch_active_coin(better_coin)
+                    else:
+                        # No active coin yet, select the best one
+                        best_coin = self._get_best_opportunity()
+                        if best_coin:
+                            print(f"\n🎯 Selecting {best_coin} for trading")
+                            await self._switch_active_coin(best_coin)
+
+                # Print current portfolio status
+                self._print_portfolio_status()
+
+                # Wait 5 minutes before next analysis
+                await asyncio.sleep(300)  # 5 minutes between market checks
+
+            except Exception as e:
+                print(f"❌ Error in market analysis: {e}")
+                await asyncio.sleep(60)  # Shorter recovery time for errors
