@@ -2,11 +2,14 @@
 from decimal import Decimal
 import asyncio
 import requests
-from traid.trading.multi_coin_bot import MultiCoinTradingBot
-from traid.runner import TradingBotRunner
+from kraken_client import KrakenClient
+from trading_bot import TradingBot
 
 async def get_all_kraken_pairs():
     """Fetch all available trading pairs from Kraken."""
+    # Define stable coins to exclude from fetched pairs
+    STABLE_COINS = {'USDT', 'USDC', 'DAI', 'BUSD', 'UST', 'EURT', 'TUSD', 'GUSD', 'PAX', 'HUSD', 'EURS'}
+
     try:
         print("Fetching available trading pairs from Kraken...")
 
