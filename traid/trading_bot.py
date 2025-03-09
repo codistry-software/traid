@@ -319,3 +319,13 @@ class TradingBot:
         rsi = 100 - (100 / (1 + rs))
 
         return rsi
+
+    def _get_top_opportunities(self, top_n: int = 3) -> List:
+        """Get top N coins with highest opportunity scores."""
+        sorted_opportunities = sorted(
+            self.opportunity_scores.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        return sorted_opportunities[:top_n]
