@@ -212,3 +212,11 @@ class TestTradingBot:
         assert top_2[0][1] == 85
         assert top_2[1][0] == 'BTC/USDT'
         assert top_2[1][1] == 75
+
+    def test_get_best_opportunity(self, trading_bot):
+        """Test getting the single best opportunity."""
+        with patch.object(trading_bot, '_get_top_opportunities', return_value=[('ETH/USDT', 85)]):
+            best = trading_bot._get_best_opportunity()
+            assert best == 'ETH/USDT'
+            trading_bot._get_top_opportunities.assert_called_once_with(1)
+
