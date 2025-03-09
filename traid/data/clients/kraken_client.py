@@ -30,10 +30,14 @@ class KrakenClient:
         self.price_data: Dict[str, Dict] = {}  # Store latest price data for each symbol
         self.ohlcv_data: Dict[str, List[Dict]] = {}  # Store OHLCV data for each symbol
         self.on_price_update: Optional[Callable] = None
+
+        # Track message handler task so we don't spawn duplicates
+        self._message_handler_task: Optional[asyncio.Task] = None
+
+        # Internal flags for reconnection/backoff
         self._last_update = 0
         self._reconnect_attempts = 0
         self._max_reconnect_attempts = 5
-        self.ohlcv_data = {}  # Initialize as empty dict
 
     async def connect(self) -> bool:
         """Establish WebSocket connection with retry logic.
