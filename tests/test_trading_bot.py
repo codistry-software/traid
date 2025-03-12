@@ -331,7 +331,7 @@ class TestTradingBot:
 
     def test_calculate_total_portfolio_value(self, trading_bot):
         """Test portfolio value calculation."""
-        trading_bot.available_balance = Decimal('300')
+        trading_bot.available_balance = Decimal('300')33
         trading_bot.allocated_balances['BTC/USDT'] = Decimal('200')
         trading_bot.allocated_balances['ETH/USDT'] = Decimal('100')
         trading_bot.positions['BTC/USDT'] = Decimal('0.5')  # Worth 50 at price 100
