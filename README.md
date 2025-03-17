@@ -70,7 +70,7 @@ python -m traid.main
 
 3. Run the bot:
    ```bash
-   python -m traid.main
+   python traid/main.py
    ```
 
 ## Usage
