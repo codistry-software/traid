@@ -27,16 +27,6 @@
 
 TRAID is a high-performance cryptocurrency trading bot that leverages technical analysis to identify trading opportunities across multiple exchanges. It supports both single-coin focused trading and dynamic multi-coin trading strategies, automatically switching between assets based on market conditions and opportunities.
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the bot
-python -m traid.main
-
-# Listening to market data and executing trades
-```
-
 ## Features
 
 - **Real-time Market Analysis**: WebSocket connections to Kraken for live price and volume data
