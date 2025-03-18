@@ -15,8 +15,8 @@
   <a title="Python Version" href="https://www.python.org/downloads/">
     <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python 3.9+" />
   </a>
-  <a title="Test Coverage" href="https://github.com/yourusername/traid/actions">
-    <img src="https://img.shields.io/badge/coverage-95%25-brightgreen" alt="95% Test Coverage" />
+  <a title="Test Coverage" href="https://github.com/codistry-software/traid/actions">
+    <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="95% Test Coverage" />
   </a>
   <br />
   <br />
